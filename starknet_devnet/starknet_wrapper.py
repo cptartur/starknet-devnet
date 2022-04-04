@@ -15,7 +15,6 @@ from starkware.starknet.business_logic.state.state import CarriedState
 from starkware.starknet.definitions.transaction_type import TransactionType
 from starkware.starknet.services.api.gateway.contract_address import calculate_contract_address
 from starkware.starknet.services.api.gateway.transaction import InvokeFunction, Deploy, Transaction
-from starkware.starknet.testing.starknet import Starknet
 from starkware.starknet.testing.objects import StarknetTransactionExecutionInfo
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.services.api.feeder_gateway.block_hash import calculate_block_hash
@@ -23,6 +22,7 @@ from starkware.starknet.business_logic.transaction_fee import calculate_tx_fee_b
 from starkware.starknet.services.api.contract_definition import EntryPointType
 from starkware.starknet.definitions import constants
 
+from .custom_starknet import create_custom_starknet
 from .origin import NullOrigin, Origin
 from .general_config import DEFAULT_GENERAL_CONFIG
 from .util import (
@@ -92,7 +92,7 @@ class StarknetWrapper:
         Returns the underlying Starknet instance, creating it first if necessary.
         """
         if not self.__starknet:
-            self.__starknet = await Starknet.empty(general_config=DEFAULT_GENERAL_CONFIG)
+            self.__starknet = await create_custom_starknet()
             await self.__preserve_current_state(self.__starknet.state.state)
         return self.__starknet
 
