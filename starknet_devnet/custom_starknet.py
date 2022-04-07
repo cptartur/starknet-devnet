@@ -5,7 +5,7 @@ Contains logic for instantiating a custom Starknet.
 import random
 
 from starkware.cairo.lang.vm.crypto import pedersen_hash
-from starkware.crypto.signature.signature import get_random_private_key, private_to_stark_key
+from starkware.crypto.signature.signature import private_to_stark_key
 from starkware.contracts.utils import load_nearby_contract
 from starkware.starknet.business_logic.state_objects import ContractState, ContractCarriedState
 from starkware.starknet.core.os.contract_hash import compute_contract_hash
@@ -95,19 +95,20 @@ async def generate_accounts(starknet: Starknet, n_accounts: int, initial_balance
         starknet.state.state.contract_states[fee_token_address] = ContractCarriedState(
             state=newly_deployed_account_state,
             storage_updates={
-                # TODO set public key
+                get_selector_from_name("public_key"): StorageLeaf(public_key)
             }
         )
 
         fee_token_storage_updates = starknet.state.state.contract_states[fee_token_address].storage_updates
-        # TODO increase balance
-        fee_token_storage_updates[pedersen_hash(get_selector_from_name("ERC20_balances"), 0)] = StorageLeaf(123)
+        balance_address = pedersen_hash(get_selector_from_name("ERC20_balances"), account_address)
+        fee_token_storage_updates[balance_address] = StorageLeaf(initial_balance)
 
 async def create_custom_starknet():
     """
     Create a wrapper of Starknet.empty() with custom configuration and predeployed contracts.
     """
 
+    token_time_start = time.time()
     fee_token_salt = 10
     constructor_calldata = [
         42, # name
@@ -131,17 +132,28 @@ async def create_custom_starknet():
     fee_token_state = fee_token_carried_state.state
     assert not fee_token_state.initialized
 
-    starknet.state.state.contract_definitions[fee_token_hash] = fee_token_definition
-
-    newly_deployed_fee_token_state = await ContractState.create(
-        contract_hash=to_bytes(fee_token_hash),
-        storage_commitment_tree=fee_token_state.storage_commitment_tree
+    deployed_contract = await starknet.deploy(
+        contract_def=fee_token_definition, contract_address_salt=fee_token_salt, constructor_calldata=constructor_calldata
     )
+    assert deployed_contract.contract_address == fee_token_address
+    print(starknet.state.state.contract_states[fee_token_address].storage_updates)
+    print("DEBUG balance address 0", pedersen_hash(get_selector_from_name("ERC20_balances"), 0))
+    print("DEBUG balance address 1", pedersen_hash(get_selector_from_name("ERC20_balances"), 1))
+    # TODO starknet.state.state.contract_definitions[fee_token_hash] = fee_token_definition
 
-    starknet.state.state.contract_states[fee_token_address] = ContractCarriedState(
-        state=newly_deployed_fee_token_state,
-        storage_updates={}
-    )
+    # newly_deployed_fee_token_state = await ContractState.create(
+    #     contract_hash=to_bytes(fee_token_hash),
+    #     storage_commitment_tree=fee_token_state.storage_commitment_tree
+    # )
+
+    # starknet.state.state.contract_states[fee_token_address] = ContractCarriedState(
+    #     state=newly_deployed_fee_token_state,
+    #     storage_updates={
+    #         get_selector_from_name("name"): 42
+    #     }
+    # )
+
+    print("token generation took:", time.time() - token_time_start)
 
     account_generation_start = time.time()
     await generate_accounts(starknet, n_accounts=20, initial_balance=1000, seed=42)
