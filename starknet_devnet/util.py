@@ -86,6 +86,9 @@ def parse_dump_on(option: str):
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 5000
+DEFAULT_ACCOUNTS = 10
+DEFAULT_INITIAL_BALANCE = 1000
+
 def parse_args():
     """
     Parses CLI arguments.
@@ -136,6 +139,23 @@ def parse_args():
         "--lite-mode-deploy-hash",
         action='store_true',
         help="Disables deploy tx hash calculation"
+    )
+    parser.add_argument(
+        "--accounts",
+        type=int,
+        help=f"Specify the number of accounts to be predeployed; defaults to {DEFAULT_ACCOUNTS}",
+        default=DEFAULT_ACCOUNTS
+    )
+    parser.add_argument(
+        "--initial_balance", "-e",
+        type=int,
+        help=f"Specify the initial balance of accounts to be predeployed; defaults to {DEFAULT_INITIAL_BALANCE}",
+        default=DEFAULT_INITIAL_BALANCE
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Specify the seed for randomness of accounts to be predeployed"
     )
     # Uncomment this once fork support is added
     # parser.add_argument(

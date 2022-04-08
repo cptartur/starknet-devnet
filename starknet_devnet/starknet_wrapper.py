@@ -6,7 +6,7 @@ starkware.starknet.testing.starknet.Starknet.
 import json
 import time
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, List
 from web3 import Web3
 
 import dill as pickle
@@ -21,10 +21,12 @@ from starkware.starknet.services.api.feeder_gateway.block_hash import calculate_
 from starkware.starknet.business_logic.transaction_fee import calculate_tx_fee_by_cairo_usage
 from starkware.starknet.services.api.contract_definition import EntryPointType
 from starkware.starknet.definitions import constants
+from starkware.starknet.testing.starknet import Starknet
 
-from .custom_starknet import create_custom_starknet
-from .origin import NullOrigin, Origin
+from .account import Account
+from . import fee_token
 from .general_config import DEFAULT_GENERAL_CONFIG
+from .origin import NullOrigin, Origin
 from .util import (
     Choice, StarknetDevnetException, TxStatus, DummyExecutionInfo,
     fixed_length_hex, enable_pickling, generate_state_update
@@ -77,6 +79,9 @@ class StarknetWrapper:
 
         self.lite_mode_deploy_hash = False
 
+        self.accounts: List[Account]
+        """List of predefined accounts"""
+
     @staticmethod
     def load(path: str) -> "StarknetWrapper":
         """Load a serialized instance of this class from `path`."""
@@ -91,9 +96,18 @@ class StarknetWrapper:
         """
         Returns the underlying Starknet instance, creating it first if necessary.
         """
+        print("DEBUG get_starknet")
         if not self.__starknet:
-            self.__starknet = await create_custom_starknet()
+            print("DEBUG get_starknet not yet defined")
+            self.__starknet = await Starknet.empty(general_config=DEFAULT_GENERAL_CONFIG)
+
+            await fee_token.deploy(self.__starknet)
+            assert self.accounts is not None
+            await self.__deploy_accounts()
+
             await self.__preserve_current_state(self.__starknet.state.state)
+        else:
+            print("DEBUG get_starknet already defined")
         return self.__starknet
 
     async def __get_state(self):
@@ -108,14 +122,17 @@ class StarknetWrapper:
         if not self.lite_mode_block_hash:
             previous_state = self.__current_carried_state
             assert previous_state is not None
+
             current_carried_state = (await self.__get_state()).state
             updated_shared_state = await current_carried_state.shared_state.apply_state_updates(
                 ffc=current_carried_state.ffc,
                 previous_carried_state=previous_state,
                 current_carried_state=current_carried_state
             )
-            self.__starknet.state.state.shared_state = updated_shared_state
-            await self.__preserve_current_state(self.__starknet.state.state)
+
+            state = await self.__get_state()
+            state.state.shared_state = updated_shared_state
+            await self.__preserve_current_state(state.state)
 
             self.__last_state_update = generate_state_update(previous_state, current_carried_state)
 
@@ -125,6 +142,14 @@ class StarknetWrapper:
 
     def __is_contract_deployed(self, address: int) -> bool:
         return address in self.__address2contract_wrapper
+
+    async def __deploy_accounts(self):
+        import time; start_time = time.time()
+        starknet = await self.get_starknet()
+        for account in self.accounts:
+            await account.deploy(starknet)
+            self.__address2contract_wrapper[account.address] = ContractWrapper(account, Account.DEFINITION)
+        print("DEBUG account deployment took", time.time() - start_time)
 
     def __get_contract_wrapper(self, address: int) -> ContractWrapper:
         if not self.__is_contract_deployed(address):
@@ -155,7 +180,7 @@ class StarknetWrapper:
 
         starknet = await self.get_starknet()
 
-        if contract_address not in self.__address2contract_wrapper:
+        if not self.__is_contract_deployed(contract_address):
             try:
                 contract = await starknet.deploy(
                     contract_def=contract_definition,
