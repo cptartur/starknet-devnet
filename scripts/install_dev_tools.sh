@@ -2,5 +2,16 @@
 
 set -e
 
-CAIRO_LANG_VERSION=$(./scripts/get_version.sh cairo-lang)
-pip3 install poetry "cairo-lang==$CAIRO_LANG_VERSION"
+echo "pyenv: $(pyenv --version)"
+echo "npm: $(npm --version)"
+echo "pip: $(pip --version)"
+echo "pip3: $(pip3 --version)"
+echo "python: $(python --version)"
+echo "python3: $(python3 --version)"
+
+which poetry || pip3 install poetry
+echo "poetry: $(poetry --version)"
+
+# install dependencies
+poetry install
+npm ci

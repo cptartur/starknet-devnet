@@ -9,7 +9,7 @@ import sys
 
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.testing.contract import StarknetContract
-from starkware.starknet.business_logic.state import CarriedState
+from starkware.starknet.business_logic.state.state import CarriedState
 
 from . import __version__
 
@@ -84,8 +84,9 @@ def parse_dump_on(option: str):
         return DumpOn[option.upper()]
     sys.exit(f"Error: Invalid --dump-on option: {option}. Valid options: {DUMP_ON_OPTIONS_STRINGIFIED}")
 
-DEFAULT_HOST = "localhost"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5050
+
 def parse_args():
     """
     Parses CLI arguments.
@@ -122,6 +123,21 @@ def parse_args():
         help=f"Specify when to dump; can dump on: {DUMP_ON_OPTIONS_STRINGIFIED}",
         type=parse_dump_on
     )
+    parser.add_argument(
+        "--lite-mode",
+        action='store_true',
+        help="Applies all optimizations by disabling some features. These can be applied individually by using other flags instead of this one."
+    )
+    parser.add_argument(
+        "--lite-mode-block-hash",
+        action='store_true',
+        help="Disables block hash calculation"
+    )
+    parser.add_argument(
+        "--lite-mode-deploy-hash",
+        action='store_true',
+        help="Disables deploy tx hash calculation"
+    )
     # Uncomment this once fork support is added
     # parser.add_argument(
     #     "--fork", "-f",
@@ -148,7 +164,7 @@ class StarknetDevnetException(StarkException):
 class DummyCallInfo:
     """Used temporarily until contracts received from starknet.deploy include their own execution_info.call_info"""
     def __init__(self):
-        self.cairo_usage = {}
+        self.execution_resources = {}
 
 @dataclass
 class DummyExecutionInfo:
