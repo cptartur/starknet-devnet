@@ -85,7 +85,8 @@ def parse_dump_on(option: str):
     sys.exit(f"Error: Invalid --dump-on option: {option}. Valid options: {DUMP_ON_OPTIONS_STRINGIFIED}")
 
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 5000
+DEFAULT_PORT = 5050
+
 def parse_args():
     """
     Parses CLI arguments.
