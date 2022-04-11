@@ -84,7 +84,7 @@ def parse_dump_on(option: str):
         return DumpOn[option.upper()]
     sys.exit(f"Error: Invalid --dump-on option: {option}. Valid options: {DUMP_ON_OPTIONS_STRINGIFIED}")
 
-DEFAULT_HOST = "localhost"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5000
 def parse_args():
     """
