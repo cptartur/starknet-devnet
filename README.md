@@ -57,7 +57,7 @@ Run a local instance of Starknet Devnet
 optional arguments:
   -h, --help            show this help message and exit
   -v, --version         Print the version
-  --host HOST           Specify the address to listen at; defaults to localhost (use the address the program outputs on start)
+  --host HOST           Specify the address to listen at; defaults to 127.0.0.1 (use the address the program outputs on start)
   --port PORT, -p PORT  Specify the port to listen at; defaults to 5000
   --load-path LOAD_PATH
                         Specify the path from which the state is loaded on
