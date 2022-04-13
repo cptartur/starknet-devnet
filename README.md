@@ -58,7 +58,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -v, --version         Print the version
   --host HOST           Specify the address to listen at; defaults to 127.0.0.1 (use the address the program outputs on start)
-  --port PORT, -p PORT  Specify the port to listen at; defaults to 5000
+  --port PORT, -p PORT  Specify the port to listen at; defaults to 5050
   --load-path LOAD_PATH
                         Specify the path from which the state is loaded on
                         startup
@@ -75,19 +75,19 @@ Devnet is available as a Docker container ([shardlabs/starknet-devnet](https://h
 docker pull shardlabs/starknet-devnet
 ```
 
-The server inside the container listens to the port 5000, which you need to publish to a desired `<PORT>` on your host machine:
+The server inside the container listens to the port 5050, which you need to publish to a desired `<PORT>` on your host machine:
 
 ```text
-docker run -p [HOST:]<PORT>:5000 shardlabs/starknet-devnet
+docker run -p [HOST:]<PORT>:5050 shardlabs/starknet-devnet
 ```
 
-E.g. if you want to use your host machine's `127.0.0.1:5000`, you need to run:
+E.g. if you want to use your host machine's `127.0.0.1:5050`, you need to run:
 
 ```text
-docker run -p 127.0.0.1:5000:5000 shardlabs/starknet-devnet
+docker run -p 127.0.0.1:5050:5050 shardlabs/starknet-devnet
 ```
 
-You may ignore any address-related output logged on container startup (e.g. `Running on all addresses` or `Running on http://172.17.0.2:5000`). What you will use is what you specified with the `-p` argument.
+You may ignore any address-related output logged on container startup (e.g. `Running on all addresses` or `Running on http://172.17.0.2:5050`). What you will use is what you specified with the `-p` argument.
 
 If you don't specify the `HOST` part, the server will indeed be available on all of your host machine's addresses (localhost, local network IP, etc.), which may present a security issue if you don't want anyone from the local network to access your Devnet instance.
 
@@ -188,13 +188,13 @@ This example:
 
 - Relies on [Docker bind mount](https://docs.docker.com/storage/bind-mounts/); try [Docker volume](https://docs.docker.com/storage/volumes/) instead.
 - Assumes that `/actual/dumpdir` exists. If unsure, use absolute paths.
-- Assumes you are listening on `127.0.0.1:5000`.
+- Assumes you are listening on `127.0.0.1:5050`.
 
 If there is `dump.pkl` inside `/actual/dumpdir`, you can load it with:
 
 ```
 docker run \
-  -p 127.0.0.1:5000:5000 \
+  -p 127.0.0.1:5050:5050 \
   --mount type=bind,source=/actual/dumpdir,target=/dumpdir \
   shardlabs/starknet-devnet \
   --load-path /dumpdir/dump.pkl
@@ -204,7 +204,7 @@ To dump to `/actual/dumpdir/dump.pkl` on Devnet shutdown, run:
 
 ```
 docker run \
-  -p 127.0.0.1:5000:5000 \
+  -p 127.0.0.1:5050:5050 \
   --mount type=bind,source=/actual/dumpdir,target=/dumpdir \
   shardlabs/starknet-devnet \
   --dump-on exit --dump-path /dumpdir/dump.pkl
