@@ -14,13 +14,15 @@ from starkware.starknet.testing.contract import StarknetContract
 
 from starkware.python.utils import to_bytes
 
+from starknet_devnet.fee_token import DEFINITION
+
 CONTRACT_PATH = "accounts_artifacts/OpenZeppelin/0.1.0/Account.cairo/Account"
 # HASH = compute_contract_hash(contract_definition=DEFINITION))
 HASH = 361479646297615797917493841430922492724680358320444679508058603177506550951
 HASH_BYTES = to_bytes(HASH)
 SALT = 20
 
-class Account: # TODO inherit from StarknetContract
+class Account:
     """Account contract wrapper."""
 
     DEFINITION = ContractDefinition.load(load_nearby_contract(CONTRACT_PATH))
@@ -35,11 +37,8 @@ class Account: # TODO inherit from StarknetContract
             caller_address=0
         )
         self.initial_balance = initial_balance
-        self._abi_function_mapping = {
-            abi_entry["name"]: abi_entry for abi_entry in Account.DEFINITION.abi if abi_entry["type"] == "function"
-        }
 
-    async def deploy(self, starknet: Starknet):
+    async def deploy(self, starknet: Starknet) -> StarknetContract:
         """Deploy this account."""
         account_carried_state = starknet.state.state.contract_states[self.address]
         account_state = account_carried_state.state
@@ -59,6 +58,9 @@ class Account: # TODO inherit from StarknetContract
             }
         )
 
+        print("Before StarknetContract")
+        print(starknet.state.state.contract_states[self.address].storage_updates)
+
         # set initial balance
         fee_token_address = starknet.state.general_config.fee_token_address
         fee_token_storage_updates = starknet.state.state.contract_states[fee_token_address].storage_updates
@@ -66,3 +68,17 @@ class Account: # TODO inherit from StarknetContract
         balance_address = pedersen_hash(get_selector_from_name("ERC20_balances"), self.address)
         fee_token_storage_updates[balance_address] = StorageLeaf(self.initial_balance)
         # TODO uint256 requires additional value (this only probably set low; high needs setting as well)
+
+        contract = StarknetContract(
+            state=starknet.state,
+            abi=DEFINITION.abi,
+            contract_address=self.address,
+            deploy_execution_info=None
+        )
+
+        print("After StarknetContract")
+        print(starknet.state.state.contract_states[self.address].storage_updates)
+        print("After StarknetContract but inside of the contract")
+        print(contract.state.state.contract_states[contract.contract_address].storage_updates)
+
+        return contract

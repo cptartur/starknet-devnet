@@ -79,7 +79,7 @@ class StarknetWrapper:
 
         self.lite_mode_deploy_hash = False
 
-        self.accounts: List[Account]
+        self.accounts: List[Account] = []
         """List of predefined accounts"""
 
     @staticmethod
@@ -96,9 +96,7 @@ class StarknetWrapper:
         """
         Returns the underlying Starknet instance, creating it first if necessary.
         """
-        print("DEBUG get_starknet")
         if not self.__starknet:
-            print("DEBUG get_starknet not yet defined")
             self.__starknet = await Starknet.empty(general_config=DEFAULT_GENERAL_CONFIG)
 
             await fee_token.deploy(self.__starknet)
@@ -106,8 +104,7 @@ class StarknetWrapper:
             await self.__deploy_accounts()
 
             await self.__preserve_current_state(self.__starknet.state.state)
-        else:
-            print("DEBUG get_starknet already defined")
+
         return self.__starknet
 
     async def __get_state(self):
@@ -144,12 +141,10 @@ class StarknetWrapper:
         return address in self.__address2contract_wrapper
 
     async def __deploy_accounts(self):
-        import time; start_time = time.time()
         starknet = await self.get_starknet()
         for account in self.accounts:
-            await account.deploy(starknet)
-            self.__address2contract_wrapper[account.address] = ContractWrapper(account, Account.DEFINITION)
-        print("DEBUG account deployment took", time.time() - start_time)
+            contract = await account.deploy(starknet)
+            self.__address2contract_wrapper[account.address] = ContractWrapper(contract, Account.DEFINITION)
 
     def __get_contract_wrapper(self, address: int) -> ContractWrapper:
         if not self.__is_contract_deployed(address):
