@@ -14,6 +14,7 @@ from .blueprints.base import base
 from .blueprints.gateway import gateway
 from .blueprints.feeder_gateway import feeder_gateway
 from .blueprints.postman import postman
+from .blueprints.rpc import rpc
 from .util import DumpOn, parse_args
 from .state import state
 
@@ -24,6 +25,7 @@ app.register_blueprint(base)
 app.register_blueprint(gateway)
 app.register_blueprint(feeder_gateway)
 app.register_blueprint(postman)
+app.register_blueprint(rpc)
 
 def main():
     """Runs the server."""
