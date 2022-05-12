@@ -20,8 +20,6 @@ from starkware.starknet.testing.objects import StarknetTransactionExecutionInfo
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.services.api.feeder_gateway.block_hash import calculate_block_hash
 from starkware.starknet.business_logic.transaction_fee import calculate_tx_fee_by_cairo_usage
-from starkware.starknet.services.api.contract_definition import EntryPointType
-from starkware.starknet.definitions import constants
 
 from .origin import NullOrigin, Origin
 from .general_config import DEFAULT_GENERAL_CONFIG
@@ -29,7 +27,7 @@ from .util import (
     Choice, StarknetDevnetException, TxStatus, DummyExecutionInfo,
     fixed_length_hex, enable_pickling, generate_state_update
 )
-from .contract_wrapper import ContractWrapper
+from .contract_wrapper import ContractWrapper, call_internal_tx
 from .transaction_wrapper import TransactionWrapper, DeployTransactionWrapper, InvokeTransactionWrapper
 from .postman_wrapper import LocalPostmanWrapper
 from .constants import FAILURE_REASON_KEY
@@ -109,11 +107,13 @@ class StarknetWrapper:
             previous_state = self.__current_carried_state
             assert previous_state is not None
             current_carried_state = (await self.__get_state()).state
+            state = await self.__get_state()
 
             current_carried_state.block_info = BlockInfo(
                 block_number=current_carried_state.block_info.block_number,
                 gas_price=current_carried_state.block_info.gas_price,
                 block_timestamp=int(time.time()),
+                sequencer_address=state.general_config.sequencer_address
             )
 
             updated_shared_state = await current_carried_state.shared_state.apply_state_updates(
@@ -153,42 +153,42 @@ class StarknetWrapper:
         else:
             tx_hash = deploy_transaction.calculate_hash(state.general_config)
 
-        contract_address = calculate_contract_address(
-            caller_address=0,
-            constructor_calldata=deploy_transaction.constructor_calldata,
-            salt=deploy_transaction.contract_address_salt,
-            contract_definition=deploy_transaction.contract_definition
-        )
-
         starknet = await self.get_starknet()
 
-        if contract_address not in self.__address2contract_wrapper:
-            try:
-                contract = await starknet.deploy(
-                    contract_def=contract_definition,
-                    constructor_calldata=deploy_transaction.constructor_calldata,
-                    contract_address_salt=deploy_transaction.contract_address_salt
-                )
-                execution_info = contract.deploy_execution_info
-                error_message = None
-                status = TxStatus.ACCEPTED_ON_L2
-
-                self.__address2contract_wrapper[contract.contract_address] = ContractWrapper(contract, contract_definition)
-                await self.__update_state()
-            except StarkException as err:
-                error_message = err.message
-                status = TxStatus.REJECTED
-                execution_info = DummyExecutionInfo()
-
-            await self.__store_transaction(
-                transaction=deploy_transaction,
-                contract_address=contract_address,
-                tx_hash=tx_hash,
-                status=status,
-                execution_info=execution_info,
-                error_message=error_message,
-                contract_hash=state.state.contract_states[contract_address].state.contract_hash
+        try:
+            contract = await starknet.deploy(
+                contract_def=contract_definition,
+                constructor_calldata=deploy_transaction.constructor_calldata,
+                contract_address_salt=deploy_transaction.contract_address_salt
             )
+            contract_address = contract.contract_address
+            execution_info = contract.deploy_execution_info
+            error_message = None
+            status = TxStatus.ACCEPTED_ON_L2
+
+            self.__address2contract_wrapper[contract.contract_address] = ContractWrapper(contract, contract_definition)
+            await self.__update_state()
+        except StarkException as err:
+            error_message = err.message
+            status = TxStatus.REJECTED
+            execution_info = DummyExecutionInfo()
+
+            contract_address = calculate_contract_address(
+                caller_address=0,
+                constructor_calldata=deploy_transaction.constructor_calldata,
+                salt=deploy_transaction.contract_address_salt,
+                contract_definition=deploy_transaction.contract_definition
+            )
+
+        await self.__store_transaction(
+            transaction=deploy_transaction,
+            contract_address=contract_address,
+            tx_hash=tx_hash,
+            status=status,
+            execution_info=execution_info,
+            error_message=error_message,
+            contract_hash=state.state.contract_states[contract_address].state.contract_hash
+        )
 
         return contract_address, tx_hash
 
@@ -330,6 +330,8 @@ class StarknetWrapper:
         signature = []
         if "signature" in tx_wrapper.transaction["transaction"]:
             signature = [int(sig_part, 16) for sig_part in tx_wrapper.transaction["transaction"]["signature"]]
+        sequencer_address = state.general_config.sequencer_address
+        gas_price = state.general_config.min_gas_price
 
         parent_block_hash = self.__get_last_block()["block_hash"] if block_number else fixed_length_hex(0)
 
@@ -344,7 +346,8 @@ class StarknetWrapper:
                 block_timestamp=timestamp,
                 tx_hashes=[int(tx_wrapper.transaction_hash, 16)],
                 tx_signatures=[signature],
-                event_hashes=[]
+                event_hashes=[],
+                sequencer_address=sequencer_address
             )
             self.__last_state_update["block_hash"] = hex(block_hash)
             self.__hash2state_update[block_hash] = self.__last_state_update
@@ -353,7 +356,9 @@ class StarknetWrapper:
         block = {
             "block_hash": block_hash_hexed,
             "block_number": block_number,
+            "gas_price": hex(gas_price),
             "parent_block_hash": parent_block_hash,
+            "sequencer_address": hex(sequencer_address),
             "state_root": state_root.hex(),
             "status": TxStatus.ACCEPTED_ON_L2.name,
             "timestamp": timestamp,
@@ -555,21 +560,9 @@ Exception:
     async def calculate_actual_fee(self, external_tx: InvokeFunction):
         """Calculates actual fee"""
         state = await self.__get_state()
-        internal_tx = InternalInvokeFunction.create(
-            contract_address=external_tx.contract_address,
-            entry_point_selector=external_tx.entry_point_selector,
-            max_fee=external_tx.max_fee,
-            entry_point_type=EntryPointType.EXTERNAL,
-            calldata=external_tx.calldata,
-            signature=external_tx.signature,
-            nonce=None,
-            chain_id=state.general_config.chain_id.value,
-            # Need to set to 0 as it will be invoked in apply_state_updates
-            version=constants.TRANSACTION_VERSION,
-        )
+        internal_tx = InternalInvokeFunction.from_external_query_tx(external_tx, state.general_config)
 
-        state_copy = state.state._copy() # pylint: disable=protected-access
-        execution_info = await internal_tx.apply_state_updates(state_copy, state.general_config)
+        execution_info = await call_internal_tx(state.copy(), internal_tx)
 
         actual_fee = calculate_tx_fee_by_cairo_usage(
             general_config=state.general_config,
