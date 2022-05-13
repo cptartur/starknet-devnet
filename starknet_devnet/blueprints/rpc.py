@@ -70,6 +70,7 @@ async def get_storage_at(contract_address: str, key: str, block_hash: str) -> st
 
 
 async def get_transaction_by_hash(transaction_hash) -> dict:
+    # TODO improve logic
     result = state.starknet_wrapper.get_transaction(transaction_hash)
 
     if "transaction" not in result:
