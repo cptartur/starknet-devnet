@@ -1,5 +1,6 @@
 """
 RPC routes
+rpc version: 0.8.0
 """
 import json
 from typing import Callable, Union, List, Tuple
