@@ -1,7 +1,6 @@
 """
 RPC routes
 """
-# TODO change formatting to be uniform with rest of devnet
 import json
 from typing import Callable, Union, List, Tuple
 
