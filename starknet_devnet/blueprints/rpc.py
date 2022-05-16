@@ -58,10 +58,13 @@ async def get_state_update_by_hash(block_hash: str) -> dict:
 
 
 async def get_storage_at(contract_address: str, key: str, block_hash: str) -> str:
-    # TODO improve logic
-    block = state.starknet_wrapper.get_block_by_hash(block_hash=block_hash)
-    if block is None:
+    try:
+        block = state.starknet_wrapper.get_block_by_hash(block_hash=block_hash)
+    except StarknetDevnetException:
         raise RpcError(code=24, message="Invalid block hash")
+
+    if not any(tx["contract_address"] == contract_address for tx in block["transactions"]):
+        raise RpcError(code=20, message="Contract not found")
 
     return await state.starknet_wrapper.get_storage_at(
         contract_address=int(contract_address, 16),
@@ -70,14 +73,15 @@ async def get_storage_at(contract_address: str, key: str, block_hash: str) -> st
 
 
 async def get_transaction_by_hash(transaction_hash) -> dict:
-    # TODO improve logic
-    result = state.starknet_wrapper.get_transaction(transaction_hash)
+    try:
+        result = state.starknet_wrapper.get_transaction(transaction_hash)
+    except StarknetDevnetException:
+        raise RpcError(code=25, message="Invalid transaction hash")
 
-    if "transaction" not in result:
-        raise RpcError(25, "Invalid transaction hash")
+    if result["status"] == "NOT_RECEIVED":
+        raise RpcError(code=25, message="Invalid transaction hash")
 
-    tx = result["transaction"]
-    return rpc_transaction(tx)
+    return rpc_transaction(result["transaction"])
 
 
 async def get_transaction_by_block_hash_and_index(block_hash: str, index: int) -> dict:
@@ -109,15 +113,22 @@ async def get_transaction_by_block_number_and_index(block_number: int, index: in
 async def get_transaction_receipt(transaction_hash: str) -> dict:
     try:
         result = state.starknet_wrapper.get_transaction_receipt(transaction_hash=transaction_hash)
-        return rpc_transaction_receipt(result)
     except StarknetDevnetException:
         raise RpcError(code=25, message="Invalid transaction hash")
+
+    if result["status"] == "NOT_RECEIVED":
+        raise RpcError(code=25, message="Invalid transaction hash")
+
+    return rpc_transaction_receipt(result)
 
 
 async def get_code(contract_address: str) -> dict:
     try:
         result = state.starknet_wrapper.get_code(contract_address=int(contract_address, 16))
     except StarknetDevnetException:
+        raise RpcError(code=20, message="Contract not found")
+
+    if len(result["bytecode"]) == 0:
         raise RpcError(code=20, message="Contract not found")
 
     return {
@@ -152,6 +163,8 @@ async def call(contract_address: str, entry_point_selector: str, calldata: list,
     # For now, we only support 'latest' block, support for specific blocks
     # in devnet is more complicated if possible at all
     if block_hash != "latest":
+        # By RPC here we should return `24 invalid block hash` but in this case i believe it's more
+        # descriptive to the user to use a custom error
         raise RpcError(code=-1, message="Calls with block_hash != 'latest' are not supported currently.")
 
     try:
