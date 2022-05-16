@@ -263,6 +263,7 @@ def rpc_transaction(tx: dict) -> dict:
         "contract_address": tx.get("contract_address"),
         "entry_point_selector": tx.get("entry_point_selector"),
         "calldata": tx.get("calldata"),
+        "max_fee": "0x0"  # FIXME use actual fee once we have it
     }
 
 
@@ -274,6 +275,7 @@ def rpc_transaction_receipt(txr: dict) -> dict:
         "messages_sent": txr["l2_to_l1_messages"] or [],
         "l1_origin_message": None,
         "events": txr["events"] or [],
+        "actual_fee": txr["actual_fee"]
     }
 
 

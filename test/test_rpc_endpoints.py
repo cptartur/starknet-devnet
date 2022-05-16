@@ -51,7 +51,9 @@ def deploy_balance_contract() -> dict:
 
 
 def deploy_invoke_contract() -> dict:
-    resp = send_transaction(json.loads(INVOKE_CONTENT))
+    invoke_tx = json.loads(INVOKE_CONTENT)
+    invoke_tx["calldata"] = ["0"]
+    resp = send_transaction(invoke_tx)
     deploy_info = json.loads(resp.data.decode("utf-8"))
     return deploy_info
 
@@ -127,7 +129,8 @@ def test_get_transaction_by_hash_deploy():
         "txn_hash": pad_zero(transaction_hash),
         "contract_address": contract_address,
         "entry_point_selector": None,
-        "calldata": None
+        "calldata": None,
+        "max_fee": "0x0"
     }
 
 
@@ -150,7 +153,8 @@ def test_get_transaction_by_block_hash_and_index():
         "txn_hash": pad_zero(transaction_hash),
         "contract_address": contract_address,
         "entry_point_selector": None,
-        "calldata": None
+        "calldata": None,
+        "max_fee": "0x0",
     }
 
 
@@ -172,7 +176,8 @@ def test_get_transaction_by_block_number_and_index():
         "txn_hash": pad_zero(transaction_hash),
         "contract_address": contract_address,
         "entry_point_selector": None,
-        "calldata": None
+        "calldata": None,
+        "max_fee": "0x0",
     }
 
 
@@ -193,7 +198,8 @@ def test_get_transaction_receipt():
         "statusData": "",
         "messages_sent": [],
         "l1_origin_message": None,
-        "events": []
+        "events": [],
+        "actual_fee": "0x0"
     }
 
 
@@ -249,9 +255,9 @@ def test_call():
         }
     )
 
-    assert isinstance(result, list)
-    assert len(result) == 1
-    assert result[0] == 0
+    assert isinstance(result["result"], list)
+    assert len(result["result"]) == 1
+    assert result["result"][0] == "0x0"
 
 
 
