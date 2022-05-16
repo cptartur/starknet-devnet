@@ -17,6 +17,7 @@ from .blueprints.postman import postman
 from .blueprints.rpc import rpc
 from .util import DumpOn, parse_args
 from .state import state
+from .starknet_wrapper import DevnetConfig
 
 app = Flask(__name__)
 CORS(app)
@@ -42,15 +43,23 @@ def main():
         except (FileNotFoundError, pickle.UnpicklingError):
             sys.exit(f"Error: Cannot load from {args.load_path}. Make sure the file exists and contains a Devnet dump.")
 
+    if args.lite_mode:
+        config = DevnetConfig(
+            lite_mode_block_hash=True,
+            lite_mode_deploy_hash=True
+        )
+    else:
+        config = DevnetConfig(
+            lite_mode_block_hash=args.lite_mode_block_hash,
+            lite_mode_deploy_hash=args.lite_mode_deploy_hash
+        )
+
+    state.starknet_wrapper.set_config(config)
     state.dumper.dump_path = args.dump_path
     state.dumper.dump_on = args.dump_on
 
-    if args.lite_mode:
-        state.starknet_wrapper.lite_mode_block_hash = True
-        state.starknet_wrapper.lite_mode_deploy_hash = True
-    else:
-        state.starknet_wrapper.lite_mode_block_hash = args.lite_mode_block_hash
-        state.starknet_wrapper.lite_mode_deploy_hash = args.lite_mode_deploy_hash
+    if args.start_time is not None:
+        state.starknet_wrapper.set_block_time(args.start_time)
 
     try:
         meinheld.listen((args.host, args.port))

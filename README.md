@@ -16,6 +16,7 @@ Aims to mimic Starknet's Alpha testnet, but with simplified functionality.
 - [Block Explorer](#block-explorer)
 - [Lite Mode](#lite-mode)
 - [Restart](#restart)
+- [Advancing time](#advancing-time)
 - [Contract debugging](#contract-debugging)
 - [Devnet speed-up troubleshooting](#devnet-speed-up-troubleshooting)
 - [Development](#development)
@@ -68,6 +69,16 @@ optional arguments:
   --dump-path DUMP_PATH
                         Specify the path to dump to
   --dump-on DUMP_ON     Specify when to dump; can dump on: exit, transaction
+  --lite-mode           Applies all optimizations by disabling some
+                        features. These can be applied individually
+                        by using other flags instead of this one.
+  --lite-mode-block-hash
+                        Disables block hash calculation
+  --lite-mode-deploy-hash
+                        Disables deploy tx hash calculation
+  --start-time START_TIME
+                        Specify the start time of the genesis block
+                        in Unix time
 ```
 
 You can run `starknet-devnet` in a separate shell, or you can run it in background with `starknet-devnet &`.
@@ -244,6 +255,42 @@ Consider passing these CLI flags on Devnet startup:
 ## Restart
 
 Devnet can be restarted by making a `POST /restart` request. All of the deployed contracts, blocks and storage updates will be restarted to the empty state. If you're using [the Hardhat plugin](https://github.com/Shard-Labs/starknet-hardhat-plugin#restart), run `await starknet.devnet.restart()`.
+
+## Advancing time
+
+Block timestamp can be manipulated by seting the exact time or seting the time offset. Timestamps methods won't generate a new block, but they will modify the time of the following blocks. All values should be set in [Unix time](https://en.wikipedia.org/wiki/Unix_time) and seconds.
+
+### Set time
+
+Sets the exact time of the next generated block. All blocks afterwards will keep a set offset.
+
+```
+POST /set_time
+{
+    "time": TIME_IN_SECONDS
+}
+```
+
+Warning: block time can be set in the past and lead to unexpected behaviour!
+
+### Increase time
+
+Increases the time offset for each generated block.
+
+```
+POST /increase_time
+{
+    "time": TIME_IN_SECONDS
+}
+```
+
+### Start time arg
+
+Devnet can be started with the `--start-time` argument.
+
+```
+starknet-devnet --start-time START_TIME_IN_SECONDS
+```
 
 ## Contract debugging
 

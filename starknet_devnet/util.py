@@ -13,6 +13,9 @@ from starkware.starknet.business_logic.state.state import CarriedState
 
 from . import __version__
 
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 5050
+
 class TxStatus(Enum):
     """
     According to: https://www.cairo-lang.org/docs/hello_starknet/intro.html#interact-with-the-contract
@@ -35,12 +38,6 @@ class TxStatus(Enum):
 
     ACCEPTED_ON_L1 = auto()
     """The transaction was accepted on-chain."""
-
-
-class Choice(Enum):
-    """Enumerates ways of interacting with a Starknet function."""
-    CALL = "call"
-    INVOKE = "invoke"
 
 
 def custom_int(arg: str) -> str:
@@ -84,8 +81,17 @@ def parse_dump_on(option: str):
         return DumpOn[option.upper()]
     sys.exit(f"Error: Invalid --dump-on option: {option}. Valid options: {DUMP_ON_OPTIONS_STRINGIFIED}")
 
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 5050
+class NonNegativeAction(argparse.Action):
+    """
+    Action for parsing the non negative int argument.
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        value = int(values)
+
+        if value < 0:
+            parser.error(f"{option_string} must be a positive integer.")
+
+        setattr(namespace, self.dest, value)
 
 def parse_args():
     """
@@ -137,6 +143,11 @@ def parse_args():
         "--lite-mode-deploy-hash",
         action='store_true',
         help="Disables deploy tx hash calculation"
+    )
+    parser.add_argument(
+        "--start-time",
+        action=NonNegativeAction,
+        help="Specify the start time of the genesis block in Unix time"
     )
     # Uncomment this once fork support is added
     # parser.add_argument(

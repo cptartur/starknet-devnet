@@ -64,9 +64,9 @@ async def get_block():
     _check_block_arguments(block_hash, block_number)
 
     if block_hash is not None:
-        result_dict = state.starknet_wrapper.get_block_by_hash(block_hash)
+        result_dict = state.starknet_wrapper.blocks.get_by_hash(block_hash)
     else:
-        result_dict = state.starknet_wrapper.get_block_by_number(block_number)
+        result_dict = state.starknet_wrapper.blocks.get_by_number(block_number)
 
     return jsonify(result_dict)
 
@@ -79,7 +79,7 @@ def get_code():
     _check_block_hash(request.args)
 
     contract_address = request.args.get("contractAddress", type=custom_int)
-    result_dict = state.starknet_wrapper.get_code(contract_address)
+    result_dict = state.starknet_wrapper.contracts.get_code(contract_address)
     return jsonify(result_dict)
 
 @feeder_gateway.route("/get_full_contract", methods=["GET"])
@@ -91,7 +91,7 @@ def get_full_contract():
 
     contract_address = request.args.get("contractAddress", type=custom_int)
 
-    result_dict = state.starknet_wrapper.get_full_contract(contract_address)
+    result_dict = state.starknet_wrapper.contracts.get_full_contract(contract_address)
 
     return jsonify(result_dict)
 
@@ -113,8 +113,8 @@ def get_transaction_status():
     """
 
     transaction_hash = request.args.get("transactionHash")
-    ret = state.starknet_wrapper.get_transaction_status(transaction_hash)
-    return jsonify(ret)
+    transaction_status = state.starknet_wrapper.transactions.get_transaction_status(transaction_hash)
+    return jsonify(transaction_status)
 
 @feeder_gateway.route("/get_transaction", methods=["GET"])
 def get_transaction():
@@ -123,8 +123,8 @@ def get_transaction():
     """
 
     transaction_hash = request.args.get("transactionHash")
-    ret = state.starknet_wrapper.get_transaction(transaction_hash)
-    return jsonify(ret)
+    transaction = state.starknet_wrapper.transactions.get_transaction(transaction_hash)
+    return jsonify(transaction)
 
 @feeder_gateway.route("/get_transaction_receipt", methods=["GET"])
 def get_transaction_receipt():
@@ -133,8 +133,8 @@ def get_transaction_receipt():
     """
 
     transaction_hash = request.args.get("transactionHash")
-    ret = state.starknet_wrapper.get_transaction_receipt(transaction_hash)
-    return jsonify(ret)
+    transaction_receipt = state.starknet_wrapper.transactions.get_transaction_receipt(transaction_hash)
+    return jsonify(transaction_receipt)
 
 @feeder_gateway.route("/get_transaction_trace", methods=["GET"])
 def get_transaction_trace():
@@ -143,8 +143,7 @@ def get_transaction_trace():
     """
 
     transaction_hash = request.args.get("transactionHash")
-
-    transaction_trace = state.starknet_wrapper.get_transaction_trace(transaction_hash)
+    transaction_trace = state.starknet_wrapper.transactions.get_transaction_trace(transaction_hash)
 
     return jsonify(transaction_trace)
 
@@ -158,7 +157,7 @@ def get_state_update():
     block_hash = request.args.get("blockHash")
     block_number = request.args.get("blockNumber", type=custom_int)
 
-    state_update = state.starknet_wrapper.get_state_update(block_hash=block_hash, block_number=block_number)
+    state_update = state.starknet_wrapper.blocks.get_state_update(block_hash=block_hash, block_number=block_number)
 
     return jsonify(state_update)
 
