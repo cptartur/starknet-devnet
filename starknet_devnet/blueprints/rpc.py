@@ -163,7 +163,7 @@ async def call(contract_address: str, entry_point_selector: str, calldata: list,
     # For now, we only support 'latest' block, support for specific blocks
     # in devnet is more complicated if possible at all
     if block_hash != "latest":
-        # By RPC here we should return `24 invalid block hash` but in this case i believe it's more
+        # By RPC here we should return `24 invalid block hash` but in this case I believe it's more
         # descriptive to the user to use a custom error
         raise RpcError(code=-1, message="Calls with block_hash != 'latest' are not supported currently.")
 
