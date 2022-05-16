@@ -32,7 +32,7 @@ async def base_route():
 
 async def get_block_by_hash(block_hash: str, requested_scope: str = "TXN_HASH") -> dict:
     try:
-        result = state.starknet_wrapper.get_block_by_hash(block_hash=block_hash)
+        result = state.starknet_wrapper.blocks.get_by_hash(block_hash=block_hash)
     except StarknetDevnetException:
         raise RpcError(code=24, message="Invalid block hash")
 
@@ -41,7 +41,7 @@ async def get_block_by_hash(block_hash: str, requested_scope: str = "TXN_HASH") 
 
 async def get_block_by_number(block_number: int, requested_scope: str = "TXN_HASH") -> dict:
     try:
-        result = state.starknet_wrapper.get_block_by_number(block_number=block_number)
+        result = state.starknet_wrapper.blocks.get_by_number(block_number=block_number)
     except StarknetDevnetException:
         raise RpcError(code=26, message="Invalid block number")
 
@@ -50,7 +50,7 @@ async def get_block_by_number(block_number: int, requested_scope: str = "TXN_HAS
 
 async def get_state_update_by_hash(block_hash: str) -> dict:
     try:
-        result = state.starknet_wrapper.get_state_update(block_hash=block_hash)
+        result = state.starknet_wrapper.blocks.get_state_update(block_hash=block_hash)
     except StarknetDevnetException:
         raise RpcError(code=24, message="Invalid block hash")
 
@@ -59,7 +59,7 @@ async def get_state_update_by_hash(block_hash: str) -> dict:
 
 async def get_storage_at(contract_address: str, key: str, block_hash: str) -> str:
     try:
-        block = state.starknet_wrapper.get_block_by_hash(block_hash=block_hash)
+        block = state.starknet_wrapper.blocks.get_by_hash(block_hash=block_hash)
     except StarknetDevnetException:
         raise RpcError(code=24, message="Invalid block hash")
 
@@ -74,7 +74,7 @@ async def get_storage_at(contract_address: str, key: str, block_hash: str) -> st
 
 async def get_transaction_by_hash(transaction_hash) -> dict:
     try:
-        result = state.starknet_wrapper.get_transaction(transaction_hash)
+        result = state.starknet_wrapper.transactions.get_transaction(transaction_hash)
     except StarknetDevnetException:
         raise RpcError(code=25, message="Invalid transaction hash")
 
@@ -86,7 +86,7 @@ async def get_transaction_by_hash(transaction_hash) -> dict:
 
 async def get_transaction_by_block_hash_and_index(block_hash: str, index: int) -> dict:
     try:
-        block = state.starknet_wrapper.get_block_by_hash(block_hash=block_hash)
+        block = state.starknet_wrapper.blocks.get_by_hash(block_hash=block_hash)
     except StarknetDevnetException:
         raise RpcError(code=24, message="Invalid block hash")
 
@@ -99,7 +99,7 @@ async def get_transaction_by_block_hash_and_index(block_hash: str, index: int) -
 
 async def get_transaction_by_block_number_and_index(block_number: int, index: int) -> dict:
     try:
-        block = state.starknet_wrapper.get_block_by_number(block_number=block_number)
+        block = state.starknet_wrapper.blocks.get_by_number(block_number=block_number)
     except StarknetDevnetException:
         raise RpcError(code=26, message="Invalid block number")
 
@@ -112,7 +112,7 @@ async def get_transaction_by_block_number_and_index(block_number: int, index: in
 
 async def get_transaction_receipt(transaction_hash: str) -> dict:
     try:
-        result = state.starknet_wrapper.get_transaction_receipt(transaction_hash=transaction_hash)
+        result = state.starknet_wrapper.transactions.get_transaction_receipt(tx_hash=transaction_hash)
     except StarknetDevnetException:
         raise RpcError(code=25, message="Invalid transaction hash")
 
@@ -124,7 +124,7 @@ async def get_transaction_receipt(transaction_hash: str) -> dict:
 
 async def get_code(contract_address: str) -> dict:
     try:
-        result = state.starknet_wrapper.get_code(contract_address=int(contract_address, 16))
+        result = state.starknet_wrapper.contracts.get_code(address=int(contract_address, 16))
     except StarknetDevnetException:
         raise RpcError(code=20, message="Contract not found")
 
@@ -139,7 +139,7 @@ async def get_code(contract_address: str) -> dict:
 
 async def get_block_transaction_count_by_hash(block_hash: str) -> int:
     try:
-        block = state.starknet_wrapper.get_block_by_hash(block_hash=block_hash)
+        block = state.starknet_wrapper.blocks.get_by_hash(block_hash=block_hash)
         return len(block["transactions"])
     except StarknetDevnetException:
         raise RpcError(code=24, message="Invalid block hash")
@@ -147,7 +147,7 @@ async def get_block_transaction_count_by_hash(block_hash: str) -> int:
 
 async def get_block_transaction_count_by_number(block_number: int) -> int:
     try:
-        block = state.starknet_wrapper.get_block_by_number(block_number=block_number)
+        block = state.starknet_wrapper.blocks.get_by_number(block_number=block_number)
         return len(block["transactions"])
     except StarknetDevnetException:
         raise RpcError(code=26, message="Invalid block number")
@@ -182,7 +182,7 @@ async def call(contract_address: str, entry_point_selector: str, calldata: list,
 
 
 async def get_block_number() -> int:
-    result = state.starknet_wrapper.get_number_of_blocks() - 1
+    result = state.starknet_wrapper.blocks.get_number_of_blocks() - 1
     return result if result >= 0 else 0
 
 
@@ -199,7 +199,7 @@ def make_invoke_function(request_body: dict) -> InvokeFunction:
 
 def rpc_block(block: dict, requested_scope: str) -> dict:
     block_number = block["block_number"]
-    old_root = state.starknet_wrapper.get_block_by_number(
+    old_root = state.starknet_wrapper.blocks.get_by_number(
         block_number=block_number - 1) if block_number - 1 >= 0 else "0x0"
 
     transactions = []
@@ -210,7 +210,7 @@ def rpc_block(block: dict, requested_scope: str) -> dict:
     elif requested_scope == "FULL_TXN_AND_RECEIPTS":
         tx = [rpc_transaction(tx) for tx in block["transactions"]]
         receipts = [
-            rpc_transaction_receipt(state.starknet_wrapper.get_transaction_receipt(tx["transaction_hash"]))
+            rpc_transaction_receipt(state.starknet_wrapper.transactions.get_transaction_receipt(tx["transaction_hash"]))
             for tx
             in block["transactions"]
         ]
