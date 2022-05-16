@@ -8,12 +8,12 @@ import json
 import pytest
 from starkware.starknet.public.abi import get_storage_var_address, get_selector_from_name
 
+from starknet_devnet.server import app
+
 from .util import (
     load_file_content,
 )
 from .test_endpoints import send_transaction
-
-from starknet_devnet.server import app
 
 
 DEPLOY_CONTENT = load_file_content("deploy.json")
@@ -21,6 +21,9 @@ INVOKE_CONTENT = load_file_content("invoke.json")
 
 
 def rpc_call(method: str, params: dict | list) -> dict:
+    """
+    Make a call to the RPC endpoint
+    """
     req = {
         "jsonrpc": "2.0",
         "method": method,
@@ -37,37 +40,51 @@ def rpc_call(method: str, params: dict | list) -> dict:
     return result
 
 
-def call_test_client(method: str, **kwargs):
+def gateway_call(method: str, **kwargs):
+    """
+    Make a call to the gateway
+    """
     resp = app.test_client().get(
         f"/feeder_gateway/{method}?{''.join(f'{key}={value}&' for key, value in kwargs.items()).rstrip('&')}"
     )
     return json.loads(resp.data.decode("utf-8"))
 
 
-def deploy_balance_contract() -> dict:
+@pytest.fixture(name="deploy_info")
+def fixture_deploy_info() -> dict:
+    """
+    Deploy a contract on devnet and return deployment info dict
+    """
     resp = send_transaction(json.loads(DEPLOY_CONTENT))
     deploy_info = json.loads(resp.data.decode("utf-8"))
     return deploy_info
 
 
-def deploy_invoke_contract() -> dict:
+@pytest.fixture(name="invoke_info")
+def fixture_invoke_info() -> dict:
+    """
+    Make a invoke transaction on devnet and return invoke info dict
+    """
     invoke_tx = json.loads(INVOKE_CONTENT)
     invoke_tx["calldata"] = ["0"]
     resp = send_transaction(invoke_tx)
-    deploy_info = json.loads(resp.data.decode("utf-8"))
-    return deploy_info
+    invoke_info = json.loads(resp.data.decode("utf-8"))
+    return invoke_info
 
 
 def pad_zero(felt: str) -> str:
+    """
+    Convert felt with format `0xValue` to format `0x0Value`
+    """
     felt = felt.lstrip("0x")
     return "0x0" + felt
 
 
-def test_get_block_by_number():
+# pylint: disable=unused-argument
+def test_get_block_by_number(deploy_info):
     """
     Get block by number
     """
-    send_transaction(json.loads(DEPLOY_CONTENT))
     resp = rpc_call(
         "starknet_getBlockByNumber", params={"block_number": 0}
     )
@@ -84,7 +101,7 @@ def test_get_block_by_number():
         assert block[key] == value
 
 
-def test_get_block_by_number_raises_on_incorrect_number():
+def test_get_block_by_number_raises_on_incorrect_number(deploy_info):
     """
     Get block by incorrect number
     """
@@ -98,21 +115,16 @@ def test_get_block_by_number_raises_on_incorrect_number():
     }
 
 
-def test_get_block_by_hash():
+def test_get_block_by_hash(deploy_info):
     """
     Get block by hash
     """
-    send_transaction(json.loads(DEPLOY_CONTENT))
-    resp1 = rpc_call(
-        "starknet_getBlockByNumber", params={"block_number": 0}
-    )
-    block1 = resp1["result"]
-    block_hash = block1["block_hash"]
+    block_hash = gateway_call("get_block", blockNumber=0)["block_hash"]
 
-    resp2 = rpc_call(
+    resp = rpc_call(
         "starknet_getBlockByHash", params={"block_hash": block_hash}
     )
-    block2 = resp2["result"]
+    block2 = resp["result"]
     expected = {
         "block_hash": block_hash,
         "parent_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -126,7 +138,7 @@ def test_get_block_by_hash():
         assert block2[key] == value
 
 
-def test_get_block_by_hash_raises_on_incorrect_hash():
+def test_get_block_by_hash_raises_on_incorrect_hash(deploy_info):
     """
     Get block by incorrect hash
     """
@@ -140,13 +152,11 @@ def test_get_block_by_hash_raises_on_incorrect_hash():
     }
 
 
-def test_get_storage_at():
+def test_get_storage_at(deploy_info):
     """
     Get storage at address
     """
-    resp = send_transaction(json.loads(DEPLOY_CONTENT))
-    deploy_info = json.loads(resp.data.decode("utf-8"))
-    block = call_test_client("get_block", blockNumber=0)
+    block = gateway_call("get_block", blockNumber=0)
 
     contract_address: str = deploy_info["address"]
     key: str = str(hex(get_storage_var_address("balance")))
@@ -164,11 +174,11 @@ def test_get_storage_at():
     assert storage == "0x0"
 
 
-def test_get_storage_at_raises_on_incorrect_contract():
+def test_get_storage_at_raises_on_incorrect_contract(deploy_info):
     """
     Get storage at incorrect contract
     """
-    block = call_test_client("get_block", blockNumber=0)
+    block = gateway_call("get_block", blockNumber=0)
 
     key: str = str(hex(get_storage_var_address("balance")))
     block_hash: str = block["block_hash"]
@@ -190,13 +200,11 @@ def test_get_storage_at_raises_on_incorrect_contract():
 # FIXME internal workings of get_storage_at would have to be changed for this to work
 #       since currently it will (correctly) return 0x0 for any incorrect key
 @pytest.mark.xfail
-def test_get_storage_at_raises_on_incorrect_key():
+def test_get_storage_at_raises_on_incorrect_key(deploy_info):
     """
     Get storage at incorrect key
     """
-    resp = send_transaction(json.loads(DEPLOY_CONTENT))
-    deploy_info = json.loads(resp.data.decode("utf-8"))
-    block = call_test_client("get_block", blockNumber=0)
+    block = gateway_call("get_block", blockNumber=0)
 
     contract_address: str = deploy_info["address"]
     block_hash: str = block["block_hash"]
@@ -215,13 +223,10 @@ def test_get_storage_at_raises_on_incorrect_key():
     }
 
 
-def test_get_storage_at_raises_on_incorrect_block_hash():
+def test_get_storage_at_raises_on_incorrect_block_hash(deploy_info):
     """
     Get storage at incorrect block hash
     """
-    resp = send_transaction(json.loads(DEPLOY_CONTENT))
-    deploy_info = json.loads(resp.data.decode("utf-8"))
-    block = call_test_client("get_block", blockNumber=0)
 
     contract_address: str = deploy_info["address"]
     key: str = str(hex(get_storage_var_address("balance")))
@@ -240,11 +245,10 @@ def test_get_storage_at_raises_on_incorrect_block_hash():
     }
 
 
-def test_get_transaction_by_hash_deploy():
+def test_get_transaction_by_hash_deploy(deploy_info):
     """
     Get transaction by hash
     """
-    deploy_info = deploy_balance_contract()
     transaction_hash: str = deploy_info["transaction_hash"]
     contract_address: str = deploy_info["address"]
 
@@ -262,7 +266,7 @@ def test_get_transaction_by_hash_deploy():
     }
 
 
-def test_get_transaction_by_hash_raises_on_incorrect_hash():
+def test_get_transaction_by_hash_raises_on_incorrect_hash(deploy_info):
     """
     Get transaction by incorrect hash
     """
@@ -276,12 +280,11 @@ def test_get_transaction_by_hash_raises_on_incorrect_hash():
     }
 
 
-def test_get_transaction_by_block_hash_and_index():
+def test_get_transaction_by_block_hash_and_index(deploy_info):
     """
     Get transaction by block hash and transaction index
     """
-    deploy_info = deploy_balance_contract()
-    block = call_test_client("get_block", blockNumber=0)
+    block = gateway_call("get_block", blockNumber=0)
     transaction_hash: str = deploy_info["transaction_hash"]
     contract_address: str = deploy_info["address"]
     block_hash: str = block["block_hash"]
@@ -304,7 +307,7 @@ def test_get_transaction_by_block_hash_and_index():
     }
 
 
-def test_get_transaction_by_block_hash_and_index_raises_on_incorrect_block_hash():
+def test_get_transaction_by_block_hash_and_index_raises_on_incorrect_block_hash(deploy_info):
     """
     Get transaction by incorrect block hash
     """
@@ -321,12 +324,11 @@ def test_get_transaction_by_block_hash_and_index_raises_on_incorrect_block_hash(
     }
 
 
-def test_get_transaction_by_block_hash_and_index_raises_on_incorrect_index():
+def test_get_transaction_by_block_hash_and_index_raises_on_incorrect_index(deploy_info):
     """
     Get transaction by block hash and incorrect transaction index
     """
-    deploy_balance_contract()
-    block = call_test_client("get_block", blockNumber=0)
+    block = gateway_call("get_block", blockNumber=0)
     block_hash: str = block["block_hash"]
 
     ex = rpc_call(
@@ -342,11 +344,10 @@ def test_get_transaction_by_block_hash_and_index_raises_on_incorrect_index():
     }
 
 
-def test_get_transaction_by_block_number_and_index():
+def test_get_transaction_by_block_number_and_index(deploy_info):
     """
     Get transaction by block number and transaction index
     """
-    deploy_info = deploy_balance_contract()
     transaction_hash: str = deploy_info["transaction_hash"]
     contract_address: str = deploy_info["address"]
     block_number: int = 0
@@ -369,7 +370,7 @@ def test_get_transaction_by_block_number_and_index():
     }
 
 
-def test_get_transaction_by_block_number_and_index_raises_on_incorrect_block_number():
+def test_get_transaction_by_block_number_and_index_raises_on_incorrect_block_number(deploy_info):
     """
     Get transaction by incorrect block number
     """
@@ -386,11 +387,10 @@ def test_get_transaction_by_block_number_and_index_raises_on_incorrect_block_num
     }
 
 
-def test_get_transaction_by_block_number_and_index_raises_on_incorrect_index():
+def test_get_transaction_by_block_number_and_index_raises_on_incorrect_index(deploy_info):
     """
     Get transaction by block hash and incorrect transaction index
     """
-    deploy_balance_contract()
     block_number: int = 0
 
     ex = rpc_call(
@@ -406,12 +406,10 @@ def test_get_transaction_by_block_number_and_index_raises_on_incorrect_index():
     }
 
 
-def test_get_transaction_receipt():
+def test_get_transaction_receipt(deploy_info, invoke_info):
     """
     Get transaction receipt
     """
-    deploy_balance_contract()
-    invoke_info = deploy_invoke_contract()
     transaction_hash: str = invoke_info["transaction_hash"]
 
     resp = rpc_call(
@@ -432,7 +430,7 @@ def test_get_transaction_receipt():
     }
 
 
-def test_get_transaction_receipt_on_incorrect_hash():
+def test_get_transaction_receipt_on_incorrect_hash(deploy_info):
     """
     Get transaction receipt by incorrect hash
     """
@@ -448,11 +446,10 @@ def test_get_transaction_receipt_on_incorrect_hash():
     }
 
 
-def test_get_code():
+def test_get_code(deploy_info):
     """
     Get contract code
     """
-    deploy_info = deploy_balance_contract()
     contract_address: str = deploy_info["address"]
 
     resp = rpc_call(
@@ -468,7 +465,7 @@ def test_get_code():
     assert "abi" != ""
 
 
-def test_get_code_raises_on_incorrect_contract():
+def test_get_code_raises_on_incorrect_contract(deploy_info):
     """
     Get contract code by incorrect contract address
     """
@@ -482,12 +479,11 @@ def test_get_code_raises_on_incorrect_contract():
     }
 
 
-def test_get_block_transaction_count_by_hash():
+def test_get_block_transaction_count_by_hash(deploy_info):
     """
     Get count of transactions in block by block hash
     """
-    deploy_balance_contract()
-    block = call_test_client("get_block", blockNumber=0)
+    block = gateway_call("get_block", blockNumber=0)
     block_hash: str = block["block_hash"]
 
     resp = rpc_call(
@@ -498,7 +494,7 @@ def test_get_block_transaction_count_by_hash():
     assert count == 1
 
 
-def test_get_block_transaction_count_by_hash_raises_on_incorrect_hash():
+def test_get_block_transaction_count_by_hash_raises_on_incorrect_hash(deploy_info):
     """
     Get count of transactions in block by incorrect block hash
     """
@@ -512,11 +508,10 @@ def test_get_block_transaction_count_by_hash_raises_on_incorrect_hash():
     }
 
 
-def test_get_block_transaction_count_by_number():
+def test_get_block_transaction_count_by_number(deploy_info):
     """
     Get count of transactions in block by block number
     """
-    deploy_balance_contract()
     block_number: int = 0
 
     resp = rpc_call(
@@ -527,7 +522,7 @@ def test_get_block_transaction_count_by_number():
     assert count == 1
 
 
-def test_get_block_transaction_count_by_number_raises_on_incorrect_number():
+def test_get_block_transaction_count_by_number_raises_on_incorrect_number(deploy_info):
     """
     Get count of transactions in block by incorrect block number
     """
@@ -541,11 +536,10 @@ def test_get_block_transaction_count_by_number_raises_on_incorrect_number():
     }
 
 
-def test_call():
+def test_call(deploy_info):
     """
     Call contract
     """
-    deploy_info = deploy_balance_contract()
     contract_address: str = deploy_info["address"]
 
     resp = rpc_call(
@@ -563,7 +557,7 @@ def test_call():
     assert result["result"][0] == "0x0"
 
 
-def test_call_raises_on_incorrect_contract_address():
+def test_call_raises_on_incorrect_contract_address(deploy_info):
     """
     Call contract with incorrect address
     """
@@ -582,11 +576,10 @@ def test_call_raises_on_incorrect_contract_address():
     }
 
 
-def test_call_raises_on_incorrect_selector():
+def test_call_raises_on_incorrect_selector(deploy_info):
     """
     Call contract with incorrect entry point selector
     """
-    deploy_info = deploy_balance_contract()
     contract_address: str = deploy_info["address"]
 
     ex = rpc_call(
@@ -604,11 +597,10 @@ def test_call_raises_on_incorrect_selector():
     }
 
 
-def test_call_raises_on_invalid_calldata():
+def test_call_raises_on_invalid_calldata(deploy_info):
     """
     Call contract with incorrect calldata
     """
-    deploy_info = deploy_balance_contract()
     contract_address: str = deploy_info["address"]
 
     ex = rpc_call(
@@ -628,11 +620,10 @@ def test_call_raises_on_invalid_calldata():
 
 # This test will fail since we are throwing a custom error block_hash different from `latest`
 @pytest.mark.xfail
-def test_call_raises_on_incorrect_block_hash():
+def test_call_raises_on_incorrect_block_hash(deploy_info):
     """
     Call contract with incorrect block hash
     """
-    deploy_info = deploy_balance_contract()
     contract_address: str = deploy_info["address"]
 
     ex = rpc_call(
