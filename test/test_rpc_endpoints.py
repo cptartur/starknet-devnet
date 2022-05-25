@@ -89,12 +89,14 @@ def test_get_block_by_number(deploy_info):
         "starknet_getBlockByNumber", params={"block_number": 0}
     )
     block = resp["result"]
+    transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
 
     assert block["parent_hash"] == "0x0"
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == "0x0000000000000000000000000000000000000000"
     assert block["old_root"] == "0x0"
+    assert block["transactions"] == [transaction_hash]
 
 
 def test_get_block_by_number_raises_on_incorrect_number(deploy_info):
@@ -115,7 +117,8 @@ def test_get_block_by_hash(deploy_info):
     """
     Get block by hash
     """
-    block_hash = gateway_call("get_block", blockNumber=0)["block_hash"]
+    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+    transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
 
     resp = rpc_call(
         "starknet_getBlockByHash", params={"block_hash": block_hash}
@@ -127,7 +130,65 @@ def test_get_block_by_hash(deploy_info):
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == "0x0000000000000000000000000000000000000000"
     assert block["old_root"] == "0x0"
+    assert block["transactions"] == [transaction_hash]
 
+
+def test_get_block_by_hash_full_txn_scope(deploy_info):
+    """
+    Get block by hash with scope FULL_TXNS
+    """
+    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+    transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
+    contract_address: str = pad_zero(deploy_info["address"])
+
+    resp = rpc_call(
+        "starknet_getBlockByHash",
+        params={
+            "block_hash": block_hash,
+            "requested_scope": "FULL_TXNS"
+        }
+    )
+    block = resp["result"]
+
+    assert block["transactions"] == [{
+        "txn_hash": transaction_hash,
+        "max_fee": "0x0",
+        "contract_address": contract_address,
+        "calldata": None,
+        "entry_point_selector": None,
+    }]
+
+
+def test_get_block_by_hash_full_txn_and_receipts_scope(deploy_info):
+    """
+    Get block by hash with scope FULL_TXN_AND_RECEIPTS
+    """
+    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+    transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
+    contract_address: str = pad_zero(deploy_info["address"])
+
+    resp = rpc_call(
+        "starknet_getBlockByHash",
+        params={
+            "block_hash": block_hash,
+            "requested_scope": "FULL_TXN_AND_RECEIPTS"
+        }
+    )
+    block = resp["result"]
+
+    assert block["transactions"] == [{
+        "txn_hash": transaction_hash,
+        "max_fee": "0x0",
+        "contract_address": contract_address,
+        "calldata": None,
+        "entry_point_selector": None,
+        "actual_fee": "0x0",
+        "status": "ACCEPTED_ON_L2",
+        "statusData": "",
+        "messages_sent": [],
+        "l1_origin_message": None,
+        "events": []
+    }]
 
 def test_get_block_by_hash_raises_on_incorrect_hash(deploy_info):
     """

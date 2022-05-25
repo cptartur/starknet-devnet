@@ -5,9 +5,7 @@ rpc version: 0.8.0
 from __future__ import annotations
 
 import json
-import typing
-from enum import Enum, auto
-from typing import Callable, Union, List, Tuple, Optional
+from typing import Callable, Union, List, Tuple, Optional, Any
 from typing_extensions import TypedDict
 
 from flask import Blueprint, request
@@ -56,7 +54,7 @@ async def get_block_by_hash(block_hash: str, requested_scope: str = "TXN_HASH") 
     except StarknetDevnetException as ex:
         raise RpcError(code=24, message="Invalid block hash") from ex
 
-    return rpc_block(block=result, requested_scope=requested_scope)
+    return await rpc_block(block=result, requested_scope=requested_scope)
 
 
 async def get_block_by_number(block_number: int, requested_scope: str = "TXN_HASH") -> dict:
@@ -68,7 +66,7 @@ async def get_block_by_number(block_number: int, requested_scope: str = "TXN_HAS
     except StarknetDevnetException as ex:
         raise RpcError(code=26, message="Invalid block number") from ex
 
-    return rpc_block(block=result, requested_scope=requested_scope)
+    return await rpc_block(block=result, requested_scope=requested_scope)
 
 
 async def get_state_update_by_hash(block_hash: str) -> dict:
@@ -258,6 +256,9 @@ def make_invoke_function(request_body: dict) -> InvokeFunction:
 
 
 class RpcBlock(TypedDict):
+    """
+    TypeDict for rpc block
+    """
     block_hash: str
     parent_hash: str
     block_number: int
@@ -269,47 +270,36 @@ class RpcBlock(TypedDict):
     transactions: List[str] | List[dict]
 
 
-def rpc_block(block: StarknetBlock, requested_scope: str) -> dict:
+async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_HASH") -> RpcBlock:
     """
     Convert gateway block to rpc block
     """
+    async def transactions() -> List[RpcTransaction]:
+        # pylint: disable=no-member
+        return [rpc_transaction(tx) for tx in block.transactions]
+
+    async def transaction_hashes() -> List[str]:
+        return [tx["txn_hash"] for tx in await transactions()]
+
+    async def full_transactions() -> list[dict[str, Any]]:
+        transactions_and_receipts = []
+        _transactions = await transactions()
+        for transaction in _transactions:
+            receipt = await get_transaction_receipt(transaction["txn_hash"])
+            combined = {**receipt, **transaction}
+            transactions_and_receipts.append(combined)
+        return transactions_and_receipts
+
     block_number = block.block_number
     old_root = state.starknet_wrapper.blocks.get_by_number(
         block_number=block_number - 1) if block_number - 1 >= 0 else "0x0"
 
-    transactions = []
-    if requested_scope == "TXN_HASH":
-        transactions = [
-            typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx).transaction_hash
-            for tx
-            in block.transactions
-        ]
-    elif requested_scope == "FULL_TXNS":
-        transactions = [
-            rpc_transaction(
-                typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx)
-            )
-            for tx
-            in block.transactions
-        ]
-    elif requested_scope == "FULL_TXN_AND_RECEIPTS":
-        transactions = [
-            rpc_transaction(
-                typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx)
-            )
-            for tx
-            in block.transactions
-        ]
-        receipts = [
-            rpc_transaction_receipt(
-                state.starknet_wrapper.transactions.get_transaction_receipt(
-                    typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx).transaction_hash
-                )
-            )
-            for tx
-            in block.transactions
-        ]
-        transactions = [{**transaction, **receipt} for transaction, receipt in zip(transactions, receipts)]
+    mapping: dict[str, Callable] = {
+        "TXN_HASH": transaction_hashes,
+        "FULL_TXNS": transactions,
+        "FULL_TXN_AND_RECEIPTS": full_transactions,
+    }
+    transactions: list = await mapping[requested_scope]()
 
     block: RpcBlock = {
         "block_hash": str(hex(block.block_hash)),
@@ -376,6 +366,9 @@ def rpc_state_diff_storage(contract: dict) -> dict:
 
 
 class RpcTransaction(TypedDict):
+    """
+    TypedDict for rpc transaction
+    """
     contract_address: str
     entry_point_selector: Optional[str]
     calldata: Optional[List[str]]
@@ -384,31 +377,38 @@ class RpcTransaction(TypedDict):
 
 
 def rpc_invoke_transaction(transaction: InvokeSpecificInfo) -> RpcTransaction:
-    tx: RpcTransaction = {
+    """
+    Convert gateway invoke transaction to rpc format
+    """
+    transaction: RpcTransaction = {
         "contract_address": rpc_felt(transaction.contract_address),
         "entry_point_selector": rpc_felt(transaction.entry_point_selector),
         "calldata": [rpc_felt(data) for data in transaction.calldata],
         "max_fee": rpc_felt(transaction.max_fee),
         "txn_hash": rpc_felt(transaction.transaction_hash),
     }
-    return tx
+    return transaction
 
 
 def rpc_deploy_transaction(transaction: DeploySpecificInfo) -> RpcTransaction:
+    """
+    Convert gateway deploy transaction to rpc format
+    """
     def calldata() -> Optional[List[str]]:
+        # pylint: disable=no-member
         _calldata = transaction.constructor_calldata
         if not _calldata:
             return None
         return [rpc_felt(data) for data in _calldata]
 
-    tx: RpcTransaction = {
+    transaction: RpcTransaction = {
         "contract_address": rpc_felt(transaction.contract_address),
         "entry_point_selector": None,
         "calldata": calldata(),
         "max_fee": rpc_felt(0),
         "txn_hash": rpc_felt(transaction.transaction_hash),
     }
-    return tx
+    return transaction
 
 
 def rpc_transaction(transaction: TransactionSpecificInfo) -> RpcTransaction:
@@ -423,22 +423,34 @@ def rpc_transaction(transaction: TransactionSpecificInfo) -> RpcTransaction:
 
 
 class MessageToL1(TypedDict):
+    """
+    TypedDict for rpc message from l2 to l1
+    """
     to_address: str
     payload: List[str]
 
 
 class MessageToL2(TypedDict):
+    """
+    TypedDict for rpc message from l1 to l2
+    """
     from_address: str
     payload: List[str]
 
 
 class Event(TypedDict):
+    """
+    TypedDict for rpc event
+    """
     from_address: str
     keys: List[str]
     data: List[str]
 
 
 class RpcReceipt(TypedDict):
+    """
+    TypedDict for rpc transaction receipt
+    """
     txn_hash: str
     actual_fee: str
     status: str
@@ -475,12 +487,12 @@ def rpc_transaction_receipt(txr: TransactionReceipt) -> RpcReceipt:
     def events() -> List[Event]:
         _events = []
         for event in txr.events:
-            ev: Event = {
+            event: Event = {
                 "from_address": rpc_felt(event.from_address),
                 "keys": [rpc_felt(e) for e in event.keys],
                 "data": [rpc_felt(d) for d in event.data],
             }
-            _events.append(ev)
+            _events.append(event)
         return _events
 
     def status() -> str:
@@ -535,6 +547,9 @@ def rpc_error(message_id: int, code: int, message: str) -> dict:
 
 
 def rpc_felt(value: int) -> str:
+    """
+    Convert 0x prefixed felt to 0x0 prefixed felt
+    """
     return "0x0" + hex(value).lstrip("0x")
 
 
