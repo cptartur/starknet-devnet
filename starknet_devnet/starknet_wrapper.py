@@ -87,26 +87,32 @@ class StarknetWrapper:
         return starknet.state
 
     async def __update_state(self):
+        previous_state = self.__current_carried_state
+        assert previous_state is not None
+        current_carried_state = (await self.get_state()).state
+        state = await self.get_state()
+
+        current_carried_state.block_info = self.block_info_generator.next_block(
+            block_info=current_carried_state.block_info,
+            general_config=state.general_config
+        )
+
         if not self.config.lite_mode_block_hash:
-            previous_state = self.__current_carried_state
-            assert previous_state is not None
-            current_carried_state = (await self.get_state()).state
-            state = await self.get_state()
-
-            current_carried_state.block_info = self.block_info_generator.next_block(
-                block_info=current_carried_state.block_info,
-                general_config=state.general_config
-            )
-
+            # This is the most time-intensive part of the function.
+            # With only skipping it in lite-mode, we still get the time benefit.
+            # In regular mode it's needed for state update calculation and block state_root calculation.
             updated_shared_state = await current_carried_state.shared_state.apply_state_updates(
                 ffc=current_carried_state.ffc,
                 previous_carried_state=previous_state,
                 current_carried_state=current_carried_state
             )
-            self.__starknet.state.state.shared_state = updated_shared_state
-            await self.__preserve_current_state(self.__starknet.state.state)
+
+            state.state.shared_state = updated_shared_state
+            await self.__preserve_current_state(state.state)
 
             return generate_state_update(previous_state, current_carried_state)
+
+        return None
 
     async def __get_state_root(self):
         state = await self.get_state()
