@@ -89,16 +89,12 @@ def test_get_block_by_number(deploy_info):
         "starknet_getBlockByNumber", params={"block_number": 0}
     )
     block = resp["result"]
-    expected = {
-        "parent_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "block_number": 0,
-        "status": "ACCEPTED_ON_L2",
-        "sequencer": "0x0000000000000000000000000000000000000000",
-        "old_root": "0x0",
-    }
 
-    for key, value in expected.items():
-        assert block[key] == value
+    assert block["parent_hash"] == "0x0"
+    assert block["block_number"] == 0
+    assert block["status"] == "ACCEPTED_ON_L2"
+    assert block["sequencer"] == "0x0000000000000000000000000000000000000000"
+    assert block["old_root"] == "0x0"
 
 
 def test_get_block_by_number_raises_on_incorrect_number(deploy_info):
@@ -124,18 +120,13 @@ def test_get_block_by_hash(deploy_info):
     resp = rpc_call(
         "starknet_getBlockByHash", params={"block_hash": block_hash}
     )
-    block2 = resp["result"]
-    expected = {
-        "block_hash": block_hash,
-        "parent_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "block_number": 0,
-        "status": "ACCEPTED_ON_L2",
-        "sequencer": "0x0000000000000000000000000000000000000000",
-        "old_root": "0x0",
-    }
+    block = resp["result"]
 
-    for key, value in expected.items():
-        assert block2[key] == value
+    assert block["parent_hash"] == "0x0"
+    assert block["block_number"] == 0
+    assert block["status"] == "ACCEPTED_ON_L2"
+    assert block["sequencer"] == "0x0000000000000000000000000000000000000000"
+    assert block["old_root"] == "0x0"
 
 
 def test_get_block_by_hash_raises_on_incorrect_hash(deploy_info):
@@ -156,11 +147,9 @@ def test_get_storage_at(deploy_info):
     """
     Get storage at address
     """
-    block = gateway_call("get_block", blockNumber=0)
-
     contract_address: str = deploy_info["address"]
     key: str = str(hex(get_storage_var_address("balance")))
-    block_hash: str = block["block_hash"]
+    block_hash: str = "latest"
 
     resp = rpc_call(
         "starknet_getStorageAt", params={
@@ -178,10 +167,8 @@ def test_get_storage_at_raises_on_incorrect_contract(deploy_info):
     """
     Get storage at incorrect contract
     """
-    block = gateway_call("get_block", blockNumber=0)
-
     key: str = str(hex(get_storage_var_address("balance")))
-    block_hash: str = block["block_hash"]
+    block_hash: str = "latest"
 
     ex = rpc_call(
         "starknet_getStorageAt", params={
@@ -223,6 +210,9 @@ def test_get_storage_at_raises_on_incorrect_key(deploy_info):
     }
 
 
+# This will fail as get_storage_at only supports "latest" as block_hash
+# and will fail with custom exception if other is provided
+@pytest.mark.xfail
 def test_get_storage_at_raises_on_incorrect_block_hash(deploy_info):
     """
     Get storage at incorrect block hash

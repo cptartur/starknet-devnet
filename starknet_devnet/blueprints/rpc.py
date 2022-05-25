@@ -2,13 +2,27 @@
 RPC routes
 rpc version: 0.8.0
 """
+from __future__ import annotations
+
 import json
-from typing import Callable, Union, List, Tuple
+import typing
+from enum import Enum, auto
+from typing import Callable, Union, List, Tuple, Optional
+from typing_extensions import TypedDict
 
 from flask import Blueprint, request
 
 from starkware.starknet.services.api.gateway.transaction import InvokeFunction
 from starkware.starkware_utils.error_handling import StarkException
+from starkware.starknet.services.api.feeder_gateway.response_objects import (
+    StarknetBlock,
+    InvokeSpecificInfo,
+    DeploySpecificInfo,
+    TransactionReceipt,
+    TransactionStatus,
+    TransactionSpecificInfo,
+    TransactionType
+)
 
 from starknet_devnet.state import state
 from ..util import StarknetDevnetException
@@ -73,12 +87,13 @@ async def get_storage_at(contract_address: str, key: str, block_hash: str) -> st
     """
     Get the value of the storage at the given address and key
     """
-    try:
-        block = state.starknet_wrapper.blocks.get_by_hash(block_hash=block_hash)
-    except StarknetDevnetException as ex:
-        raise RpcError(code=24, message="Invalid block hash") from ex
+    if block_hash != "latest":
+        # By RPC here we should return `24 invalid block hash` but in this case I believe it's more
+        # descriptive to the user to use a custom error
+        raise RpcError(code=-1, message="Calls with block_hash != 'latest' are not supported currently.")
 
-    if not any(tx["contract_address"] == contract_address for tx in block["transactions"]):
+    # FIXME remove type cast/this comment once issue #106 is addressed
+    if not state.starknet_wrapper.contracts.is_deployed(int(contract_address, 16)):
         raise RpcError(code=20, message="Contract not found")
 
     return await state.starknet_wrapper.get_storage_at(
@@ -87,7 +102,7 @@ async def get_storage_at(contract_address: str, key: str, block_hash: str) -> st
     )
 
 
-async def get_transaction_by_hash(transaction_hash) -> dict:
+async def get_transaction_by_hash(transaction_hash: str) -> dict:
     """
     Get the details and status of a submitted transaction
     """
@@ -96,10 +111,10 @@ async def get_transaction_by_hash(transaction_hash) -> dict:
     except StarknetDevnetException as ex:
         raise RpcError(code=25, message="Invalid transaction hash") from ex
 
-    if result["status"] == "NOT_RECEIVED":
+    if result.status == TransactionStatus.NOT_RECEIVED:
         raise RpcError(code=25, message="Invalid transaction hash")
 
-    return rpc_transaction(result["transaction"])
+    return rpc_transaction(result.transaction)
 
 
 async def get_transaction_by_block_hash_and_index(block_hash: str, index: int) -> dict:
@@ -112,8 +127,8 @@ async def get_transaction_by_block_hash_and_index(block_hash: str, index: int) -
         raise RpcError(code=24, message="Invalid block hash") from ex
 
     try:
-        transaction_hash = block["transactions"][index]["transaction_hash"]
-        return await get_transaction_by_hash(transaction_hash=transaction_hash)
+        transaction_hash: int = block.transactions[index].transaction_hash
+        return await get_transaction_by_hash(transaction_hash=rpc_felt(transaction_hash))
     except IndexError as ex:
         raise RpcError(code=27, message="Invalid transaction index in a block") from ex
 
@@ -128,8 +143,8 @@ async def get_transaction_by_block_number_and_index(block_number: int, index: in
         raise RpcError(code=26, message="Invalid block number") from ex
 
     try:
-        transaction_hash = block["transactions"][index]["transaction_hash"]
-        return await get_transaction_by_hash(transaction_hash=transaction_hash)
+        transaction_hash: int = block.transactions[index].transaction_hash
+        return await get_transaction_by_hash(transaction_hash=rpc_felt(transaction_hash))
     except IndexError as ex:
         raise RpcError(code=27, message="Invalid transaction index in a block") from ex
 
@@ -143,7 +158,7 @@ async def get_transaction_receipt(transaction_hash: str) -> dict:
     except StarknetDevnetException as ex:
         raise RpcError(code=25, message="Invalid transaction hash") from ex
 
-    if result["status"] == "NOT_RECEIVED":
+    if result.status == TransactionStatus.NOT_RECEIVED:
         raise RpcError(code=25, message="Invalid transaction hash")
 
     return rpc_transaction_receipt(result)
@@ -173,7 +188,7 @@ async def get_block_transaction_count_by_hash(block_hash: str) -> int:
     """
     try:
         block = state.starknet_wrapper.blocks.get_by_hash(block_hash=block_hash)
-        return len(block["transactions"])
+        return len(block.transactions)
     except StarknetDevnetException as ex:
         raise RpcError(code=24, message="Invalid block hash") from ex
 
@@ -184,7 +199,7 @@ async def get_block_transaction_count_by_number(block_number: int) -> int:
     """
     try:
         block = state.starknet_wrapper.blocks.get_by_number(block_number=block_number)
-        return len(block["transactions"])
+        return len(block.transactions)
     except StarknetDevnetException as ex:
         raise RpcError(code=26, message="Invalid block number") from ex
 
@@ -242,39 +257,72 @@ def make_invoke_function(request_body: dict) -> InvokeFunction:
     )
 
 
-def rpc_block(block: dict, requested_scope: str) -> dict:
+class RpcBlock(TypedDict):
+    block_hash: str
+    parent_hash: str
+    block_number: int
+    status: str
+    sequencer: str
+    new_root: str
+    old_root: str
+    accepted_time: int
+    transactions: List[str] | List[dict]
+
+
+def rpc_block(block: StarknetBlock, requested_scope: str) -> dict:
     """
     Convert gateway block to rpc block
     """
-    block_number = block["block_number"]
+    block_number = block.block_number
     old_root = state.starknet_wrapper.blocks.get_by_number(
         block_number=block_number - 1) if block_number - 1 >= 0 else "0x0"
 
     transactions = []
     if requested_scope == "TXN_HASH":
-        transactions = [tx["transaction_hash"] for tx in block["transactions"]]
-    elif requested_scope == "FULL_TXNS":
-        transactions = [rpc_transaction(tx) for tx in block["transactions"]]
-    elif requested_scope == "FULL_TXN_AND_RECEIPTS":
-        transactions = [rpc_transaction(transaction) for transaction in block["transactions"]]
-        receipts = [
-            rpc_transaction_receipt(state.starknet_wrapper.transactions.get_transaction_receipt(tx["transaction_hash"]))
+        transactions = [
+            typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx).transaction_hash
             for tx
-            in block["transactions"]
+            in block.transactions
+        ]
+    elif requested_scope == "FULL_TXNS":
+        transactions = [
+            rpc_transaction(
+                typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx)
+            )
+            for tx
+            in block.transactions
+        ]
+    elif requested_scope == "FULL_TXN_AND_RECEIPTS":
+        transactions = [
+            rpc_transaction(
+                typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx)
+            )
+            for tx
+            in block.transactions
+        ]
+        receipts = [
+            rpc_transaction_receipt(
+                state.starknet_wrapper.transactions.get_transaction_receipt(
+                    typing.cast(Union[InvokeSpecificInfo, DeploySpecificInfo], tx).transaction_hash
+                )
+            )
+            for tx
+            in block.transactions
         ]
         transactions = [{**transaction, **receipt} for transaction, receipt in zip(transactions, receipts)]
 
-    return {
-        "block_hash": block["block_hash"],
-        "parent_hash": block["parent_block_hash"] or "0x0",
-        "block_number": block["block_number"],
-        "status": block["status"],
+    block: RpcBlock = {
+        "block_hash": str(hex(block.block_hash)),
+        "parent_hash": str(hex(block.parent_block_hash)) or "0x0",
+        "block_number": block.block_number if block.block_number is not None else 0,
+        "status": block.status.name,
         "sequencer": "0x0000000000000000000000000000000000000000",
-        "new_root": block["state_root"],
-        "old_root": old_root,
-        "accepted_time": block["timestamp"],
+        "new_root": str(block.state_root),
+        "old_root": str(old_root),
+        "accepted_time": block.timestamp,
         "transactions": transactions,
     }
+    return block
 
 
 def rpc_state_update(state_update: dict) -> dict:
@@ -327,32 +375,138 @@ def rpc_state_diff_storage(contract: dict) -> dict:
     }
 
 
-def rpc_transaction(transaction: dict) -> dict:
+class RpcTransaction(TypedDict):
+    contract_address: str
+    entry_point_selector: Optional[str]
+    calldata: Optional[List[str]]
+    max_fee: str
+    txn_hash: str
+
+
+def rpc_invoke_transaction(transaction: InvokeSpecificInfo) -> RpcTransaction:
+    tx: RpcTransaction = {
+        "contract_address": rpc_felt(transaction.contract_address),
+        "entry_point_selector": rpc_felt(transaction.entry_point_selector),
+        "calldata": [rpc_felt(data) for data in transaction.calldata],
+        "max_fee": rpc_felt(transaction.max_fee),
+        "txn_hash": rpc_felt(transaction.transaction_hash),
+    }
+    return tx
+
+
+def rpc_deploy_transaction(transaction: DeploySpecificInfo) -> RpcTransaction:
+    def calldata() -> Optional[List[str]]:
+        _calldata = transaction.constructor_calldata
+        if not _calldata:
+            return None
+        return [rpc_felt(data) for data in _calldata]
+
+    tx: RpcTransaction = {
+        "contract_address": rpc_felt(transaction.contract_address),
+        "entry_point_selector": None,
+        "calldata": calldata(),
+        "max_fee": rpc_felt(0),
+        "txn_hash": rpc_felt(transaction.transaction_hash),
+    }
+    return tx
+
+
+def rpc_transaction(transaction: TransactionSpecificInfo) -> RpcTransaction:
     """
     Convert gateway transaction to rpc transaction
     """
-    return {
-        "txn_hash": transaction.get("transaction_hash"),
-        "contract_address": transaction.get("contract_address"),
-        "entry_point_selector": transaction.get("entry_point_selector"),
-        "calldata": transaction.get("calldata"),
-        "max_fee": "0x0"  # FIXME use actual fee once we have it
+    tx_mapping = {
+        TransactionType.DEPLOY: rpc_deploy_transaction,
+        TransactionType.INVOKE_FUNCTION: rpc_invoke_transaction
     }
+    return tx_mapping[transaction.tx_type](transaction)
 
 
-def rpc_transaction_receipt(txr: dict) -> dict:
+class MessageToL1(TypedDict):
+    to_address: str
+    payload: List[str]
+
+
+class MessageToL2(TypedDict):
+    from_address: str
+    payload: List[str]
+
+
+class Event(TypedDict):
+    from_address: str
+    keys: List[str]
+    data: List[str]
+
+
+class RpcReceipt(TypedDict):
+    txn_hash: str
+    actual_fee: str
+    status: str
+    statusData: str
+    messages_sent: List[MessageToL1]
+    l1_origin_message: Optional[MessageToL2]
+    events: List[Event]
+
+
+def rpc_transaction_receipt(txr: TransactionReceipt) -> RpcReceipt:
     """
     Convert gateway transaction receipt to rpc transaction receipt
     """
-    return {
-        "txn_hash": txr["transaction_hash"],
-        "status": txr["status"],
+    def l2_to_l1_messages() -> List[MessageToL1]:
+        messages = []
+        for message in txr.l2_to_l1_messages:
+            msg: MessageToL1 = {
+                "to_address": message.to_address,
+                "payload": [rpc_felt(p) for p in message.payload]
+            }
+            messages.append(msg)
+        return messages
+
+    def l1_to_l2_message() -> Optional[MessageToL2]:
+        if txr.l1_to_l2_consumed_message is None:
+            return None
+
+        msg: MessageToL2 = {
+            "from_address": txr.l1_to_l2_consumed_message.from_address,
+            "payload": [rpc_felt(p) for p in txr.l1_to_l2_consumed_message.payload]
+        }
+        return msg
+
+    def events() -> List[Event]:
+        _events = []
+        for event in txr.events:
+            ev: Event = {
+                "from_address": rpc_felt(event.from_address),
+                "keys": [rpc_felt(e) for e in event.keys],
+                "data": [rpc_felt(d) for d in event.data],
+            }
+            _events.append(ev)
+        return _events
+
+    def status() -> str:
+        if txr.status is None:
+            return "UNKNOWN"
+
+        mapping = {
+            TransactionStatus.NOT_RECEIVED: "UNKNOWN",
+            TransactionStatus.ACCEPTED_ON_L2: "ACCEPTED_ON_L2",
+            TransactionStatus.ACCEPTED_ON_L1: "ACCEPTED_ON_L1",
+            TransactionStatus.RECEIVED: "RECEIVED",
+            TransactionStatus.PENDING: "PENDING",
+            TransactionStatus.REJECTED: "REJECTED",
+        }
+        return mapping[txr.status]
+
+    receipt: RpcReceipt = {
+        "txn_hash": rpc_felt(txr.transaction_hash),
+        "status": status(),
         "statusData": "",
-        "messages_sent": txr["l2_to_l1_messages"] or [],
-        "l1_origin_message": None,
-        "events": txr["events"] or [],
-        "actual_fee": txr["actual_fee"]
+        "messages_sent": l2_to_l1_messages(),
+        "l1_origin_message": l1_to_l2_message(),
+        "events": events(),
+        "actual_fee": rpc_felt(txr.actual_fee or 0),
     }
+    return receipt
 
 
 def rpc_response(message_id: int, content: dict) -> dict:
@@ -378,6 +532,10 @@ def rpc_error(message_id: int, code: int, message: str) -> dict:
             "message": message
         }
     }
+
+
+def rpc_felt(value: int) -> str:
+    return "0x0" + hex(value).lstrip("0x")
 
 
 def parse_body(body: dict) -> Tuple[Callable, Union[List, dict], int]:
@@ -414,6 +572,7 @@ class RpcError(Exception):
     """
     Error message returned by rpc
     """
+
     def __init__(self, code, message):
         super().__init__(message)
         self.code = code
