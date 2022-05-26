@@ -28,6 +28,7 @@ from ..general_config import DEFAULT_GENERAL_CONFIG
 
 rpc = Blueprint("rpc", __name__, url_prefix="/rpc")
 
+PROTOCOL_VERSION = "0.8.0"
 
 @rpc.route("", methods=["POST"])
 async def base_route():
@@ -246,6 +247,35 @@ async def chain_id() -> str:
     """
     chain: int = DEFAULT_GENERAL_CONFIG.chain_id.value
     return hex(chain)
+
+
+async def pending_transactions():
+    """
+    Returns the transactions in the transaction pool, recognized by this sequencer
+    """
+    raise NotImplementedError()
+
+
+async def protocol_version() -> str:
+    """
+    Returns the current starknet protocol version identifier, as supported by this sequencer
+    """
+    protocol_hex = PROTOCOL_VERSION.encode("utf-8").hex()
+    return "0x" + protocol_hex
+
+
+async def syncing():
+    """
+    Returns an object about the sync status, or false if the node is not synching
+    """
+    raise NotImplementedError()
+
+
+async def get_events():
+    """
+    Returns all events matching the given filter
+    """
+    raise NotImplementedError()
 
 
 def make_invoke_function(request_body: dict) -> InvokeFunction:
@@ -624,6 +654,10 @@ def parse_body(body: dict) -> Tuple[Callable, Union[List, dict], int]:
         "call": call,
         "blockNumber": get_block_number,
         "chainId": chain_id,
+        "pendingTransactions": pending_transactions,
+        "protocolVersion": protocol_version,
+        "syncing": syncing,
+        "getEvents": get_events,
     }
 
     method_name = body["method"].lstrip("starknet_")

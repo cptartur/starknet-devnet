@@ -787,3 +787,17 @@ def test_chain_id(deploy_info):
 
     assert isinstance(rpc_chain_id, str)
     assert rpc_chain_id == hex(chain_id)
+
+
+def test_protocol_version(deploy_info):
+    """
+    Test protocol version
+    """
+    protocol_version = "0.8.0"
+
+    resp = rpc_call("starknet_protocolVersion", params={})
+    version_hex: str = resp["result"]
+    version_bytes = bytes.fromhex(version_hex.lstrip("0x"))
+    version = version_bytes.decode("utf-8")
+
+    assert version == protocol_version
