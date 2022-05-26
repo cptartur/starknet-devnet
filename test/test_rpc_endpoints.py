@@ -9,7 +9,7 @@ import pytest
 from starkware.starknet.public.abi import get_storage_var_address, get_selector_from_name
 
 from starknet_devnet.server import app
-from starknet_devnet.general_config import DEFAULT_SEQUENCER_ADDRESS
+from starknet_devnet.general_config import DEFAULT_GENERAL_CONFIG
 
 from .util import (
     load_file_content,
@@ -61,7 +61,7 @@ def fixture_deploy_info() -> dict:
     return deploy_info
 
 
-@pytest.fixture(name="invoke_info")
+@pytest.fixture(name="invoke_info", scope="module")
 def fixture_invoke_info() -> dict:
     """
     Make an invoke transaction on devnet and return invoke info dict
@@ -86,16 +86,19 @@ def test_get_block_by_number(deploy_info):
     """
     Get block by number
     """
+    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+
     resp = rpc_call(
         "starknet_getBlockByNumber", params={"block_number": 0}
     )
     block = resp["result"]
     transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
 
+    assert block["block_hash"] == pad_zero(block_hash)
     assert block["parent_hash"] == "0x0"
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
-    assert block["sequencer"] == hex(DEFAULT_SEQUENCER_ADDRESS)
+    assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
     assert block["old_root"] == "0x0"
     assert block["transactions"] == [transaction_hash]
 
@@ -126,10 +129,11 @@ def test_get_block_by_hash(deploy_info):
     )
     block = resp["result"]
 
+    assert block["block_hash"] == pad_zero(block_hash)
     assert block["parent_hash"] == "0x0"
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
-    assert block["sequencer"] == hex(DEFAULT_SEQUENCER_ADDRESS)
+    assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
     assert block["old_root"] == "0x0"
     assert block["transactions"] == [transaction_hash]
 
@@ -203,6 +207,69 @@ def test_get_block_by_hash_raises_on_incorrect_hash(deploy_info):
     assert ex["error"] == {
         "code": 24,
         "message": "Invalid block hash"
+    }
+
+
+@pytest.mark.xfail
+def test_get_state_update_by_hash(deploy_info, invoke_info):
+    """
+    Get state update for the block
+    """
+    block_with_deploy = gateway_call("get_block", blockNumber=0)
+    block_with_invoke = gateway_call("get_block", blockNumber=1)
+
+    contract_address: str = deploy_info["address"]
+    block_with_deploy_hash: str = block_with_deploy["block_hash"]
+    block_with_invoke_hash: str = block_with_invoke["block_hash"]
+
+    resp = rpc_call(
+        "starknet_getStateUpdateByHash", params={
+            "block_hash": block_with_deploy_hash
+        }
+    )
+    state_update = resp["result"]
+
+    assert state_update["block_hash"] == block_with_deploy_hash
+    assert "new_root" in state_update
+    assert isinstance(state_update["new_root"], str)
+    assert "old_root" in state_update
+    assert isinstance(state_update["old_root"], str)
+    assert "accepted_time" in state_update
+    assert isinstance(state_update["accepted_time"], int)
+    assert state_update["state_diff"] == {
+        "storage_diffs": [],
+        "contracts": [
+            {
+                "address": contract_address,
+                "contract_hash": "06f8d704f5a8f6bcb53a1c87c6f8d466ab0aaa5cf962084ac03a2145aac2d823",  # FIXME this is hardcoded but I don't know how this contract
+            }                                                                                         #     hash is calculated otherwise
+        ],
+    }
+
+    resp = rpc_call(
+        "starknet_getStateUpdateByHash", params={
+            "block_hash": block_with_invoke_hash
+        }
+    )
+    state_update = resp["result"]
+
+    assert state_update["block_hash"] == block_with_invoke_hash
+    assert "new_root" in state_update
+    assert isinstance(state_update["new_root"], str)
+    assert "old_root" in state_update
+    assert isinstance(state_update["old_root"], str)
+    assert "accepted_time" in state_update
+    assert isinstance(state_update["accepted_time"], int)
+    assert state_update["state_diff"] == {
+        "storage_diffs": [
+            {
+                # FIXME this will fail because of bug in devnet
+                "address": contract_address,
+                "key": pad_zero(hex(get_storage_var_address("balance"))),
+                "value": "0x0a",
+            }
+        ],
+        "contracts": [],
     }
 
 
@@ -691,3 +758,32 @@ def test_call_raises_on_incorrect_block_hash(deploy_info):
         "code": 24,
         "message": "Invalid block hash"
     }
+
+
+def test_get_block_number(deploy_info):
+    """
+    Get the number of the latest accepted  block
+    """
+
+    latest_block = gateway_call("get_block", blockNumber="latest")
+    latest_block_number: int = latest_block["block_number"]
+
+    resp = rpc_call(
+        "starknet_blockNumber", params={}
+    )
+    block_number: int = resp["result"]
+
+    assert latest_block_number == block_number
+
+
+def test_chain_id(deploy_info):
+    """
+    Test chain id
+    """
+    chain_id = DEFAULT_GENERAL_CONFIG.chain_id.value
+
+    resp = rpc_call("starknet_chainId", params={})
+    rpc_chain_id = resp["result"]
+
+    assert isinstance(rpc_chain_id, str)
+    assert rpc_chain_id == hex(chain_id)

@@ -24,7 +24,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
 
 from starknet_devnet.state import state
 from ..util import StarknetDevnetException
-from ..general_config import DEFAULT_SEQUENCER_ADDRESS
+from ..general_config import DEFAULT_GENERAL_CONFIG
 
 rpc = Blueprint("rpc", __name__, url_prefix="/rpc")
 
@@ -38,8 +38,6 @@ async def base_route():
 
     try:
         result = await method(*args) if isinstance(args, list) else await method(**args)
-    except TypeError as error:
-        return rpc_error(message_id=message_id, code=-1, message=str(error))
     except RpcError as error:
         return rpc_error(message_id=message_id, code=error.code, message=error.message)
 
@@ -242,6 +240,14 @@ async def get_block_number() -> int:
     return result if result >= 0 else 0
 
 
+async def chain_id() -> str:
+    """
+    Return the currently configured StarkNet chain id
+    """
+    chain: int = DEFAULT_GENERAL_CONFIG.chain_id.value
+    return hex(chain)
+
+
 def make_invoke_function(request_body: dict) -> InvokeFunction:
     """
     Convert RPC request to internal InvokeFunction
@@ -303,11 +309,11 @@ async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_
     transactions: list = await mapping[requested_scope]()
 
     block: RpcBlock = {
-        "block_hash": hex(block.block_hash),
-        "parent_hash": hex(block.parent_block_hash) or "0x0",
+        "block_hash": rpc_felt(block.block_hash),
+        "parent_hash": rpc_felt(block.parent_block_hash) or "0x0",
         "block_number": block.block_number if block.block_number is not None else 0,
         "status": block.status.name,
-        "sequencer": hex(DEFAULT_SEQUENCER_ADDRESS),
+        "sequencer": hex(DEFAULT_GENERAL_CONFIG.sequencer_address),
         "new_root": str(block.state_root),
         "old_root": str(old_root),
         "accepted_time": block.timestamp,
@@ -316,33 +322,78 @@ async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_
     return block
 
 
-def rpc_state_update(state_update: dict) -> dict:
+class RpcStorageDiff(TypedDict):
+    """
+    TypedDict for rpc storage diff
+    """
+    address: str
+    key: str
+    value: str
+
+
+class RpcContractDiff(TypedDict):
+    """
+    TypedDict for rpc contract diff
+    """
+    address: str
+    contract_hash: str
+
+
+class RpcStateDiff(TypedDict):
+    """
+    TypedDict for roc state diff
+    """
+    storage_diffs: List[RpcStorageDiff]
+    contracts: List[RpcContractDiff]
+
+
+class RpcStateUpdate(TypedDict):
+    """
+    TypedDict for rpc state update
+    """
+    block_hash: str
+    new_root: str
+    old_root: str
+    accepted_time: int
+    state_diff: RpcStateDiff
+
+
+def rpc_state_update(state_update: dict) -> RpcStateUpdate:
     """
     Convert gateway state update to rpc state update
     """
-    return {
+    def storage_diffs() -> List[RpcStorageDiff]:
+        _storage_diffs = []
+        for address, storage in state_update["state_diff"]["storage_diffs"].items():
+            diff: RpcStorageDiff = {
+                "address": address,
+                "key": storage["key"],
+                "value": storage["value"]
+            }
+            _storage_diffs.append(diff)
+        return _storage_diffs
+
+    def contracts() -> List[RpcContractDiff]:
+        _contracts = []
+        for contract in state_update["state_diff"]["deployed_contracts"]:
+            diff: RpcContractDiff = {
+                "address": contract["address"],
+                "contract_hash": contract["contract_hash"]
+            }
+            _contracts.append(diff)
+        return _contracts
+
+    rpc_state: RpcStateUpdate = {
         "block_hash": state_update["block_hash"],
         "new_root": state_update["new_root"],
         "old_root": state_update["old_root"],
-        "accepted_time": 0,  # hardcoded value as state_update dict does not contain timestamp
+        "accepted_time": 0, # FIXME remove hardcoded value
         "state_diff": {
-            "deployed_contracts": [
-                rpc_state_diff_contract(contract)
-                for contract
-                in state_update["state_diff"]["deployed_contracts"]
-            ],
-            "storage_diffs": [
-                {
-                    **{
-                        "address": address
-                    },
-                    **storage
-                }
-                for address, storage
-                in state_update["state_diff"]["storage_diffs"].items()
-            ],
-        },
+            "storage_diffs": storage_diffs(),
+            "contracts": contracts(),
+        }
     }
+    return rpc_state
 
 
 def rpc_state_diff_contract(contract: dict) -> dict:
@@ -572,6 +623,7 @@ def parse_body(body: dict) -> Tuple[Callable, Union[List, dict], int]:
         "getBlockTransactionCountByNumber": get_block_transaction_count_by_number,
         "call": call,
         "blockNumber": get_block_number,
+        "chainId": chain_id,
     }
 
     method_name = body["method"].lstrip("starknet_")
