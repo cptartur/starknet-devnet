@@ -86,7 +86,9 @@ def test_get_block_by_number(deploy_info):
     """
     Get block by number
     """
-    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+    block: dict = gateway_call("get_block", blockNumber=0)
+    block_hash: str = block["block_hash"]
+    new_root: str = block["state_root"]
 
     resp = rpc_call(
         "starknet_getBlockByNumber", params={"block_number": 0}
@@ -99,7 +101,8 @@ def test_get_block_by_number(deploy_info):
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
-    assert block["old_root"] == "0x0"
+    assert block["old_root"] == "0x" + "0" * 63
+    assert block["new_root"][2:] == new_root[1:]
     assert block["transactions"] == [transaction_hash]
 
 
@@ -121,7 +124,9 @@ def test_get_block_by_hash(deploy_info):
     """
     Get block by hash
     """
-    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+    block: dict = gateway_call("get_block", blockNumber=0)
+    block_hash: str = block["block_hash"]
+    new_root: str = block["state_root"]
     transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
 
     resp = rpc_call(
@@ -134,7 +139,8 @@ def test_get_block_by_hash(deploy_info):
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
-    assert block["old_root"] == "0x0"
+    assert block["old_root"] == "0x" + "0" * 63
+    assert block["new_root"][2:] == new_root[1:]
     assert block["transactions"] == [transaction_hash]
 
 
@@ -222,6 +228,9 @@ def test_get_state_update_by_hash(deploy_info, invoke_info):
     block_with_deploy_hash: str = block_with_deploy["block_hash"]
     block_with_invoke_hash: str = block_with_invoke["block_hash"]
 
+    new_root_deploy = gateway_call("get_state_update", blockHash=block_with_deploy_hash)["state_root"]
+    new_root_invoke = gateway_call("get_state_update", blockHash=block_with_invoke_hash)["state_root"]
+
     resp = rpc_call(
         "starknet_getStateUpdateByHash", params={
             "block_hash": block_with_deploy_hash
@@ -230,8 +239,7 @@ def test_get_state_update_by_hash(deploy_info, invoke_info):
     state_update = resp["result"]
 
     assert state_update["block_hash"] == block_with_deploy_hash
-    assert "new_root" in state_update
-    assert isinstance(state_update["new_root"], str)
+    assert state_update["new_root"][2:] == new_root_deploy[1:]
     assert "old_root" in state_update
     assert isinstance(state_update["old_root"], str)
     assert "accepted_time" in state_update
@@ -254,8 +262,7 @@ def test_get_state_update_by_hash(deploy_info, invoke_info):
     state_update = resp["result"]
 
     assert state_update["block_hash"] == block_with_invoke_hash
-    assert "new_root" in state_update
-    assert isinstance(state_update["new_root"], str)
+    assert state_update["new_root"][2:] == new_root_invoke[1:]
     assert "old_root" in state_update
     assert isinstance(state_update["old_root"], str)
     assert "accepted_time" in state_update

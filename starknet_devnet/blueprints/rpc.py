@@ -327,9 +327,16 @@ async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_
             transactions_and_receipts.append(combined)
         return transactions_and_receipts
 
+    def new_root() -> str:
+        return rpc_root(block.state_root.hex())
+
+    def old_root() -> str:
+        _root = state.starknet_wrapper.blocks.get_by_number(block_number=block_number - 1).state_root \
+            if block_number - 1 >= 0 \
+            else b"\x00" * 32
+        return rpc_root(_root.hex())
+
     block_number = block.block_number
-    old_root = state.starknet_wrapper.blocks.get_by_number(
-        block_number=block_number - 1) if block_number - 1 >= 0 else "0x0"
 
     mapping: dict[str, Callable] = {
         "TXN_HASH": transaction_hashes,
@@ -344,8 +351,8 @@ async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_
         "block_number": block.block_number if block.block_number is not None else 0,
         "status": block.status.name,
         "sequencer": hex(DEFAULT_GENERAL_CONFIG.sequencer_address),
-        "new_root": str(block.state_root),
-        "old_root": str(old_root),
+        "new_root": new_root(),
+        "old_root": old_root(),
         "accepted_time": block.timestamp,
         "transactions": transactions,
     }
@@ -415,8 +422,8 @@ def rpc_state_update(state_update: dict) -> RpcStateUpdate:
 
     rpc_state: RpcStateUpdate = {
         "block_hash": state_update["block_hash"],
-        "new_root": state_update["new_root"],
-        "old_root": state_update["old_root"],
+        "new_root": rpc_root(state_update["new_root"]),
+        "old_root": rpc_root(state_update["old_root"]),
         "accepted_time": 0, # FIXME remove hardcoded value
         "state_diff": {
             "storage_diffs": storage_diffs(),
@@ -633,6 +640,14 @@ def rpc_felt(value: int) -> str:
     Convert 0x prefixed felt to 0x0 prefixed felt
     """
     return "0x0" + hex(value).lstrip("0x")
+
+
+def rpc_root(root: str) -> str:
+    """
+    Convert 0 prefixed root to 0x prefixed root
+    """
+    root = root[1:]
+    return "0x" + root
 
 
 def parse_body(body: dict) -> Tuple[Callable, Union[List, dict], int]:
