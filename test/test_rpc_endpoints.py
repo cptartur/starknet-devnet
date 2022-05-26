@@ -50,7 +50,7 @@ def gateway_call(method: str, **kwargs):
     return json.loads(resp.data.decode("utf-8"))
 
 
-@pytest.fixture(name="deploy_info")
+@pytest.fixture(name="deploy_info", scope="module")
 def fixture_deploy_info() -> dict:
     """
     Deploy a contract on devnet and return deployment info dict
@@ -189,6 +189,7 @@ def test_get_block_by_hash_full_txn_and_receipts_scope(deploy_info):
         "l1_origin_message": None,
         "events": []
     }]
+
 
 def test_get_block_by_hash_raises_on_incorrect_hash(deploy_info):
     """
@@ -461,7 +462,7 @@ def test_get_transaction_receipt(deploy_info, invoke_info):
     """
     Get transaction receipt
     """
-    transaction_hash: str = invoke_info["transaction_hash"]
+    transaction_hash: str = deploy_info["transaction_hash"]
 
     resp = rpc_call(
         "starknet_getTransactionReceipt", params={
