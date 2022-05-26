@@ -24,6 +24,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
 
 from starknet_devnet.state import state
 from ..util import StarknetDevnetException
+from ..general_config import DEFAULT_SEQUENCER_ADDRESS
 
 rpc = Blueprint("rpc", __name__, url_prefix="/rpc")
 
@@ -90,7 +91,6 @@ async def get_storage_at(contract_address: str, key: str, block_hash: str) -> st
         # descriptive to the user to use a custom error
         raise RpcError(code=-1, message="Calls with block_hash != 'latest' are not supported currently.")
 
-    # FIXME remove type cast/this comment once issue #106 is addressed
     if not state.starknet_wrapper.contracts.is_deployed(int(contract_address, 16)):
         raise RpcError(code=20, message="Contract not found")
 
@@ -219,11 +219,12 @@ async def call(contract_address: str, entry_point_selector: str, calldata: list,
         # descriptive to the user to use a custom error
         raise RpcError(code=-1, message="Calls with block_hash != 'latest' are not supported currently.")
 
+    if not state.starknet_wrapper.contracts.is_deployed(int(contract_address, 16)):
+        raise RpcError(code=20, message="Contract not found")
+
     try:
         return await state.starknet_wrapper.call(transaction=make_invoke_function(request_body))
     except StarknetDevnetException as ex:
-        if "No contract at the provided address" in ex.message:
-            raise RpcError(code=20, message="Contract not found") from ex
         raise RpcError(code=-1, message=ex.message) from ex
     except StarkException as ex:
         if f"Entry point {entry_point_selector} not found" in ex.message:
@@ -302,11 +303,11 @@ async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_
     transactions: list = await mapping[requested_scope]()
 
     block: RpcBlock = {
-        "block_hash": str(hex(block.block_hash)),
-        "parent_hash": str(hex(block.parent_block_hash)) or "0x0",
+        "block_hash": hex(block.block_hash),
+        "parent_hash": hex(block.parent_block_hash) or "0x0",
         "block_number": block.block_number if block.block_number is not None else 0,
         "status": block.status.name,
-        "sequencer": "0x0000000000000000000000000000000000000000",
+        "sequencer": hex(DEFAULT_SEQUENCER_ADDRESS),
         "new_root": str(block.state_root),
         "old_root": str(old_root),
         "accepted_time": block.timestamp,

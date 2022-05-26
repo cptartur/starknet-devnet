@@ -9,6 +9,7 @@ import pytest
 from starkware.starknet.public.abi import get_storage_var_address, get_selector_from_name
 
 from starknet_devnet.server import app
+from starknet_devnet.general_config import DEFAULT_SEQUENCER_ADDRESS
 
 from .util import (
     load_file_content,
@@ -45,7 +46,7 @@ def gateway_call(method: str, **kwargs):
     Make a call to the gateway
     """
     resp = app.test_client().get(
-        f"/feeder_gateway/{method}?{''.join(f'{key}={value}&' for key, value in kwargs.items()).rstrip('&')}"
+        f"/feeder_gateway/{method}?{'&'.join(f'{key}={value}&' for key, value in kwargs.items())}"
     )
     return json.loads(resp.data.decode("utf-8"))
 
@@ -63,7 +64,7 @@ def fixture_deploy_info() -> dict:
 @pytest.fixture(name="invoke_info")
 def fixture_invoke_info() -> dict:
     """
-    Make a invoke transaction on devnet and return invoke info dict
+    Make an invoke transaction on devnet and return invoke info dict
     """
     invoke_tx = json.loads(INVOKE_CONTENT)
     invoke_tx["calldata"] = ["0"]
@@ -94,7 +95,7 @@ def test_get_block_by_number(deploy_info):
     assert block["parent_hash"] == "0x0"
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
-    assert block["sequencer"] == "0x0000000000000000000000000000000000000000"
+    assert block["sequencer"] == hex(DEFAULT_SEQUENCER_ADDRESS)
     assert block["old_root"] == "0x0"
     assert block["transactions"] == [transaction_hash]
 
@@ -128,7 +129,7 @@ def test_get_block_by_hash(deploy_info):
     assert block["parent_hash"] == "0x0"
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
-    assert block["sequencer"] == "0x0000000000000000000000000000000000000000"
+    assert block["sequencer"] == hex(DEFAULT_SEQUENCER_ADDRESS)
     assert block["old_root"] == "0x0"
     assert block["transactions"] == [transaction_hash]
 
@@ -210,7 +211,7 @@ def test_get_storage_at(deploy_info):
     Get storage at address
     """
     contract_address: str = deploy_info["address"]
-    key: str = str(hex(get_storage_var_address("balance")))
+    key: str = hex(get_storage_var_address("balance"))
     block_hash: str = "latest"
 
     resp = rpc_call(
@@ -229,7 +230,7 @@ def test_get_storage_at_raises_on_incorrect_contract(deploy_info):
     """
     Get storage at incorrect contract
     """
-    key: str = str(hex(get_storage_var_address("balance")))
+    key: str = hex(get_storage_var_address("balance"))
     block_hash: str = "latest"
 
     ex = rpc_call(
@@ -246,8 +247,8 @@ def test_get_storage_at_raises_on_incorrect_contract(deploy_info):
     }
 
 
-# FIXME internal workings of get_storage_at would have to be changed for this to work
-#       since currently it will (correctly) return 0x0 for any incorrect key
+# internal workings of get_storage_at would have to be changed for this to work
+# since currently it will (correctly) return 0x0 for any incorrect key
 @pytest.mark.xfail
 def test_get_storage_at_raises_on_incorrect_key(deploy_info):
     """
@@ -281,7 +282,7 @@ def test_get_storage_at_raises_on_incorrect_block_hash(deploy_info):
     """
 
     contract_address: str = deploy_info["address"]
-    key: str = str(hex(get_storage_var_address("balance")))
+    key: str = hex(get_storage_var_address("balance"))
 
     ex = rpc_call(
         "starknet_getStorageAt", params={
@@ -503,18 +504,17 @@ def test_get_code(deploy_info):
     Get contract code
     """
     contract_address: str = deploy_info["address"]
+    contract: dict = gateway_call(
+        "get_code", contractAddress=contract_address
+    )
 
     resp = rpc_call(
         "starknet_getCode", params={"contract_address": contract_address}
     )
     code = resp["result"]
 
-    assert "bytecode" in code
-    assert isinstance(code["bytecode"], list)
-    assert len(code["bytecode"]) != 0
-    assert "abi" in code
-    assert isinstance(code["abi"], str)
-    assert "abi" != ""
+    assert code["bytecode"] == contract["bytecode"]
+    assert json.loads(code["abi"]) == contract["abi"]
 
 
 def test_get_code_raises_on_incorrect_contract(deploy_info):
@@ -597,7 +597,7 @@ def test_call(deploy_info):
     resp = rpc_call(
         "starknet_call", params={
             "contract_address": contract_address,
-            "entry_point_selector": str(hex(get_selector_from_name("get_balance"))),
+            "entry_point_selector": hex(get_selector_from_name("get_balance")),
             "calldata": [],
             "block_hash": "latest"
         }
@@ -616,7 +616,7 @@ def test_call_raises_on_incorrect_contract_address(deploy_info):
     ex = rpc_call(
         "starknet_call", params={
             "contract_address": "0x07b529269b82f3f3ebbb2c463a9e1edaa2c6eea8fa308ff70b30398766a2e20c",
-            "entry_point_selector": str(hex(get_selector_from_name("get_balance"))),
+            "entry_point_selector": hex(get_selector_from_name("get_balance")),
             "calldata": [],
             "block_hash": "latest"
         }
@@ -637,7 +637,7 @@ def test_call_raises_on_incorrect_selector(deploy_info):
     ex = rpc_call(
         "starknet_call", params={
             "contract_address": contract_address,
-            "entry_point_selector": str(hex(get_selector_from_name("xxxxxxx"))),
+            "entry_point_selector": hex(get_selector_from_name("xxxxxxx")),
             "calldata": [],
             "block_hash": "latest"
         }
@@ -658,7 +658,7 @@ def test_call_raises_on_invalid_calldata(deploy_info):
     ex = rpc_call(
         "starknet_call", params={
             "contract_address": contract_address,
-            "entry_point_selector": str(hex(get_selector_from_name("get_balance"))),
+            "entry_point_selector": hex(get_selector_from_name("get_balance")),
             "calldata": ["a", "b", "123"],
             "block_hash": "latest"
         }
@@ -681,7 +681,7 @@ def test_call_raises_on_incorrect_block_hash(deploy_info):
     ex = rpc_call(
         "starknet_call", params={
             "contract_address": contract_address,
-            "entry_point_selector": str(hex(get_selector_from_name("get_balance"))),
+            "entry_point_selector": hex(get_selector_from_name("get_balance")),
             "calldata": [],
             "block_hash": "0x0"
         }
