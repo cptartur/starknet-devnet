@@ -235,7 +235,7 @@ async def call(contract_address: str, entry_point_selector: str, calldata: list,
 
 async def get_block_number() -> int:
     """
-    Get current number of blocks
+    Get the most recent accepted block number
     """
     result = state.starknet_wrapper.blocks.get_number_of_blocks() - 1
     return result if result >= 0 else 0
