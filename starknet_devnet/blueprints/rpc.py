@@ -420,11 +420,15 @@ def rpc_state_update(state_update: dict) -> RpcStateUpdate:
             _contracts.append(diff)
         return _contracts
 
+    def timestamp() -> int:
+        block = state.starknet_wrapper.blocks.get_by_hash(block_hash=state_update["block_hash"])
+        return block.timestamp
+
     rpc_state: RpcStateUpdate = {
         "block_hash": state_update["block_hash"],
         "new_root": rpc_root(state_update["new_root"]),
         "old_root": rpc_root(state_update["old_root"]),
-        "accepted_time": 0, # FIXME remove hardcoded value
+        "accepted_time": timestamp(),
         "state_diff": {
             "storage_diffs": storage_diffs(),
             "contracts": contracts(),

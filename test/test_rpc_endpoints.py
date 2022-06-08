@@ -227,6 +227,8 @@ def test_get_state_update_by_hash(deploy_info, invoke_info):
     contract_address: str = deploy_info["address"]
     block_with_deploy_hash: str = block_with_deploy["block_hash"]
     block_with_invoke_hash: str = block_with_invoke["block_hash"]
+    block_with_deploy_timestamp: int = block_with_deploy["timestamp"]
+    block_with_invoke_timestamp: int = block_with_invoke["timestamp"]
 
     new_root_deploy = gateway_call("get_state_update", blockHash=block_with_deploy_hash)["state_root"]
     new_root_invoke = gateway_call("get_state_update", blockHash=block_with_invoke_hash)["state_root"]
@@ -242,8 +244,7 @@ def test_get_state_update_by_hash(deploy_info, invoke_info):
     assert state_update["new_root"][2:] == new_root_deploy[1:]
     assert "old_root" in state_update
     assert isinstance(state_update["old_root"], str)
-    assert "accepted_time" in state_update
-    assert isinstance(state_update["accepted_time"], int)
+    assert state_update["accepted_time"] == block_with_deploy_timestamp
     assert state_update["state_diff"] == {
         "storage_diffs": [],
         "contracts": [
@@ -265,8 +266,7 @@ def test_get_state_update_by_hash(deploy_info, invoke_info):
     assert state_update["new_root"][2:] == new_root_invoke[1:]
     assert "old_root" in state_update
     assert isinstance(state_update["old_root"], str)
-    assert "accepted_time" in state_update
-    assert isinstance(state_update["accepted_time"], int)
+    assert state_update["timestamp"] == block_with_invoke_timestamp
     assert state_update["state_diff"] == {
         "storage_diffs": [
             {
