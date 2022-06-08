@@ -2,17 +2,15 @@
 Test postman usage. This test has one single pytest case, because the whole flow needs to be tested, and requires all steps to be performed
 """
 
-
-
-
-import time
 import json
+import time
 import subprocess
 
 from test.web3_util import web3_call, web3_deploy, web3_transact
 from test.settings import L1_URL, GATEWAY_URL
-from test.util import call, deploy, devnet_in_background, invoke, load_file_content
+from test.util import call, deploy, devnet_in_background, invoke, load_file_content, terminate_and_wait
 
+import psutil
 import pytest
 
 from web3 import Web3
@@ -32,14 +30,20 @@ L1L2_EXAMPLE_PATH = f"{ETH_CONTRACTS_PATH}/L1L2.sol/L1L2Example.json"
 def run_before_and_after_test():
     """Run l1 testnet before and kill it after the test run"""
     # Setup L1 testnet
-    command = ["npx", "hardhat", "node"]
-    # pylint: disable=consider-using-with
-    l1_proc = subprocess.Popen(command, close_fds=True, stdout=subprocess.PIPE)
-    time.sleep(25)
-    yield
 
-    # after test
-    l1_proc.kill()
+    command = ["npx", "hardhat", "node"]
+    with subprocess.Popen(command, close_fds=True) as node_proc:
+        # before test
+        time.sleep(10)
+        yield
+        # after test
+        wrapped_node_proc = psutil.Process(node_proc.pid)
+        children = wrapped_node_proc.children(recursive=True)
+        print("Killing children", children)
+        for child_proc in children:
+            terminate_and_wait(child_proc)
+        print("Children after killing", wrapped_node_proc.children(recursive=True))
+        terminate_and_wait(node_proc)
 
 def flush():
     """Flushes the postman messages. Returns response data"""

@@ -3,11 +3,11 @@ A server exposing Starknet functionalities as API endpoints.
 """
 
 import sys
-import meinheld
-import dill as pickle
+from pickle import UnpicklingError
 
 from flask import Flask
 from flask_cors import CORS
+import meinheld
 
 from starkware.starkware_utils.error_handling import StarkException
 from .blueprints.base import base
@@ -22,27 +22,41 @@ from .starknet_wrapper import DevnetConfig
 app = Flask(__name__)
 CORS(app)
 
+@app.before_first_request
+async def initialize_starknet():
+    """Initialize Starknet to assert it's defined before its first use."""
+    await state.starknet_wrapper.initialize()
+
 app.register_blueprint(base)
 app.register_blueprint(gateway)
 app.register_blueprint(feeder_gateway)
 app.register_blueprint(postman)
 app.register_blueprint(rpc)
 
-def main():
-    """Runs the server."""
+def generate_accounts(args):
+    """Generate accounts """
+    if args.accounts:
+        state.generate_accounts(
+            n_accounts=args.accounts,
+            initial_balance=args.initial_balance,
+            seed=args.seed
+        )
 
-    args = parse_args()
+def set_dump_options(args):
+    """Assign dumping options from args to state."""
+    state.dumper.dump_path = args.dump_path
+    state.dumper.dump_on = args.dump_on
 
-    # Uncomment this once fork support is added
-    # origin = Origin(args.fork) if args.fork else NullOrigin()
-    # starknet_wrapper.origin = origin
-
+def load_dumped(args):
+    """Load a previously dumped state if specified."""
     if args.load_path:
         try:
             state.load(args.load_path)
-        except (FileNotFoundError, pickle.UnpicklingError):
+        except (FileNotFoundError, UnpicklingError):
             sys.exit(f"Error: Cannot load from {args.load_path}. Make sure the file exists and contains a Devnet dump.")
 
+def enable_lite_mode(args):
+    """Enable lite mode if specified."""
     if args.lite_mode:
         config = DevnetConfig(
             lite_mode_block_hash=True,
@@ -55,11 +69,31 @@ def main():
         )
 
     state.starknet_wrapper.set_config(config)
-    state.dumper.dump_path = args.dump_path
-    state.dumper.dump_on = args.dump_on
 
+def set_start_time(args):
+    """Assign start time if specified."""
     if args.start_time is not None:
         state.starknet_wrapper.set_block_time(args.start_time)
+
+def set_gas_price(args):
+    """Assign gas_price"""
+    state.starknet_wrapper.set_gas_price(args.gas_price)
+
+def main():
+    """Runs the server."""
+
+    args = parse_args()
+
+    # Uncomment this once fork support is added
+    # origin = Origin(args.fork) if args.fork else NullOrigin()
+    # starknet_wrapper.origin = origin
+
+    load_dumped(args)
+    generate_accounts(args)
+    set_dump_options(args)
+    enable_lite_mode(args)
+    set_start_time(args)
+    set_gas_price(args)
 
     try:
         meinheld.listen((args.host, args.port))

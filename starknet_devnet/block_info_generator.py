@@ -14,9 +14,10 @@ def now() -> int:
 class BlockInfoGenerator():
     """Generator of BlockInfo objects with the correct timestamp"""
 
-    def __init__(self, start_time: int = None):
+    def __init__(self, start_time: int = None, gas_price: int = 0):
         self.block_timestamp_offset = 0
         self.next_block_start_time = start_time
+        self.gas_price = gas_price
 
     def next_block(self, block_info: BlockInfo, general_config: StarknetGeneralConfig):
         """
@@ -30,7 +31,7 @@ class BlockInfoGenerator():
             self.next_block_start_time = None
 
         return BlockInfo(
-            gas_price=block_info.gas_price,
+            gas_price=self.gas_price,
             block_number=block_info.block_number,
             block_timestamp=block_timestamp,
             sequencer_address=general_config.sequencer_address
@@ -47,3 +48,9 @@ class BlockInfoGenerator():
         Sets the timestamp of next block
         """
         self.next_block_start_time = time_s
+
+    def set_gas_price(self, gas_price: int):
+        """
+        Sets the gas price of next block
+        """
+        self.gas_price = gas_price

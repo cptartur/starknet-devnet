@@ -60,9 +60,9 @@ def hash_multicall(sender, calls, nonce, max_fee, version):
     ])
 
 
-def get_signature(message_hash):
+def get_signature(message_hash, private_key):
     """Get signature from message hash and private key."""
-    sig_r, sig_s = sign(message_hash, PRIVATE_KEY)
+    sig_r, sig_s = sign(message_hash, private_key)
     return [str(sig_r), str(sig_s)]
 
 def from_call_to_call_array(calls):
@@ -88,7 +88,8 @@ def adapt_inputs(execute_calldata):
     """Get stringified inputs from execute_calldata."""
     return [str(v) for v in execute_calldata]
 
-def get_execute_args(calls, account_address, nonce=None, max_fee=0, version=TRANSACTION_VERSION):
+# pylint: disable=too-many-arguments
+def get_execute_args(calls, account_address, private_key, nonce=None, max_fee=0, version=TRANSACTION_VERSION):
     """Returns signature and execute calldata"""
 
     if nonce is None:
@@ -104,7 +105,7 @@ def get_execute_args(calls, account_address, nonce=None, max_fee=0, version=TRAN
         max_fee=max_fee,
         version=version
     )
-    signature = get_signature(message_hash)
+    signature = get_signature(message_hash, private_key)
 
     # get execute calldata
     (call_array, calldata) = from_call_to_call_array(calls)
@@ -112,11 +113,12 @@ def get_execute_args(calls, account_address, nonce=None, max_fee=0, version=TRAN
 
     return signature, execute_calldata
 
-def get_estimated_fee(calls, account_address, nonce=None):
-    """Get estmated fee."""
+def get_estimated_fee(calls, account_address, private_key, nonce=None):
+    """Get estimated fee through account."""
     signature, execute_calldata = get_execute_args(
         calls=calls,
         account_address=account_address,
+        private_key=private_key,
         nonce=nonce,
         version=QUERY_VERSION
     )
@@ -129,11 +131,18 @@ def get_estimated_fee(calls, account_address, nonce=None):
         signature=signature,
     )
 
-def execute(calls, account_address, nonce=None, max_fee=0):
+def execute(calls, account_address, private_key, nonce=None, max_fee=0, query=False):
     """Invoke __execute__ with correct calldata and signature."""
-    signature, execute_calldata = get_execute_args(calls, account_address, nonce, max_fee)
+    if query:
+        version = QUERY_VERSION
+        runner = call
+    else:
+        version = TRANSACTION_VERSION
+        runner = invoke
 
-    return invoke(
+    signature, execute_calldata = get_execute_args(calls, account_address, private_key, nonce, max_fee, version=version)
+
+    return runner(
         "__execute__",
         inputs=adapt_inputs(execute_calldata),
         address=account_address,

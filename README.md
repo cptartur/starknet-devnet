@@ -29,7 +29,7 @@ pip install starknet-devnet
 
 ### Requirements
 
-Works with Python versions >=3.7.2 and <=3.9.10.
+Works with Python versions >=3.7.2 and <3.10.
 
 On Ubuntu/Debian, first run:
 
@@ -61,7 +61,9 @@ Run a local instance of Starknet Devnet
 optional arguments:
   -h, --help            show this help message and exit
   -v, --version         Print the version
-  --host HOST           Specify the address to listen at; defaults to 127.0.0.1 (use the address the program outputs on start)
+  --host HOST           Specify the address to listen at; defaults to
+                        127.0.0.1 (use the address the program outputs on
+                        start)
   --port PORT, -p PORT  Specify the port to listen at; defaults to 5050
   --load-path LOAD_PATH
                         Specify the path from which the state is loaded on
@@ -69,16 +71,24 @@ optional arguments:
   --dump-path DUMP_PATH
                         Specify the path to dump to
   --dump-on DUMP_ON     Specify when to dump; can dump on: exit, transaction
-  --lite-mode           Applies all optimizations by disabling some
-                        features. These can be applied individually
-                        by using other flags instead of this one.
+  --lite-mode           Applies all lite-mode-* optimizations by disabling some features.
   --lite-mode-block-hash
                         Disables block hash calculation
   --lite-mode-deploy-hash
                         Disables deploy tx hash calculation
+  --accounts ACCOUNTS   Specify the number of accounts to be predeployed;
+                        defaults to 10
+  --initial-balance INITIAL_BALANCE, -e INITIAL_BALANCE
+                        Specify the initial balance of accounts to be
+                        predeployed; defaults to 1e+21 (wei)
+  --seed SEED           Specify the seed for randomness of accounts to be
+                        predeployed
   --start-time START_TIME
-                        Specify the start time of the genesis block
-                        in Unix time
+                        Specify the start time of the genesis block in Unix
+                        time seconds
+  --gas-price GAS_PRICE, -g GAS_PRICE
+                        Specify the gas price in wei per gas unit; defaults to
+                        1e+11
 ```
 
 You can run `starknet-devnet` in a separate shell, or you can run it in background with `starknet-devnet &`.
@@ -136,7 +146,7 @@ If you don't specify the `HOST` part, the server will indeed be available on all
   - `get_transaction`
   - `get_transaction_receipt`
   - `get_transaction_trace`
-  - `invoke` (currently will fail for max_fee > 0)
+  - `invoke`
   - `tx_status`
 - The following Starknet CLI commands are **not** supported:
   - `get_contract_addresses`
@@ -265,7 +275,7 @@ Block timestamp can be manipulated by seting the exact time or seting the time o
 
 ### Set time
 
-Sets the exact time of the next generated block. All blocks afterwards will keep a set offset.
+Sets the exact time of the next generated block. All subsequent blocks will keep the set offset.
 
 ```
 POST /set_time
@@ -309,6 +319,25 @@ To enable printing with a dockerized version of Devnet set `PYTHONUNBUFFERED=1`:
 docker run -p 127.0.0.1:5050:5050 -e PYTHONUNBUFFERED=1 shardlabs/starknet-devnet
 ```
 
+## Predeployed accounts
+
+Devnet predeploys `--accounts` with some `--initial-balance`. The accounts get charged for transactions according to the `--gas-price`. A `--seed` can be used to regenerate the same set of accounts. Read more about it in the [Run section](#run).
+
+The balance of an account can be checked using:
+
+```
+GET /account_balance?address=<HEX_ADDRESS>
+```
+
+Response:
+
+```json
+{
+  "amount": <AMOUNT>,
+  "unit": "wei"
+}
+```
+
 ## Devnet speed-up troubleshooting
 
 If you are not satisfied with your Devnet performance, consider the following:
@@ -325,11 +354,10 @@ If you are not satisfied with your Devnet performance, consider the following:
 
 ## Development
 
-If you're a developer willing to contribute, be sure to have installed [Poetry](https://pypi.org/project/poetry/) and all the dependency packages.
+If you're a developer willing to contribute, be sure to have installed [Poetry](https://pypi.org/project/poetry/) and all the dependency packages by running the following script. You are expected to have npm.
 
 ```text
-pip install poetry
-poetry install
+./scripts/install_dev_tools.sh
 ```
 
 ### Development - Run
@@ -338,18 +366,30 @@ poetry install
 poetry run starknet-devnet
 ```
 
-### Development - Test
-
-When running tests locally, do it from the project root:
+### Development - Lint
 
 ```text
-poetry run pytest test/
+poetry run pylint starknet_devnet test
 ```
 
-or for a single file
+### Development - Test
 
-```text
-poetry run pytest test/<TEST_FILE>
+When running tests locally, do it from the project root. First, generate the artifacts:
+
+```bash
+./scripts/compile_contracts.sh
+
+poetry run pytest test/
+
+poetry run pytest test/<TEST_FILE> # for a single file
+
+poetry run pytest test/<TEST_FILE>::<TEST_CASE> # for a single test case
+```
+
+### Development - Check Versioning consistency
+
+```
+./scripts/check_versions.sh
 ```
 
 ### Development - Build

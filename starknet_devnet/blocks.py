@@ -5,8 +5,9 @@ Class for generating and handling blocks
 from typing import Dict
 
 from starkware.starknet.testing.state import StarknetState
-from starkware.starknet.services.api.feeder_gateway.block_hash import calculate_block_hash
+from starkware.starknet.core.os.block_hash.block_hash import calculate_block_hash
 from starkware.starknet.services.api.feeder_gateway.response_objects import StarknetBlock, BlockStatus
+from starkware.starknet.services.api.feeder_gateway.response_objects import BlockStateUpdate
 
 from .origin import Origin
 from .util import StarknetDevnetException
@@ -19,7 +20,7 @@ class DevnetBlocks():
         self.origin = origin
         self.lite = lite
         self.__num2block: Dict[int, StarknetBlock] = {}
-        self.__state_updates = {}
+        self.__state_updates: Dict[int, BlockStateUpdate] = {}
         self.__hash2num: Dict[str, int] = {}
 
     def __get_last_block(self):
@@ -63,7 +64,7 @@ class DevnetBlocks():
 
         return self.origin.get_block_by_hash(block_hash)
 
-    def get_state_update(self, block_hash=None, block_number=None):
+    def get_state_update(self, block_hash=None, block_number=None) -> BlockStateUpdate:
         """
         Returns state update for the provided block hash or block number.
         It will return the last state update if block is not provided.
@@ -129,7 +130,7 @@ class DevnetBlocks():
             timestamp=timestamp,
             transaction_receipts=transaction_receipts,
             status=BlockStatus.ACCEPTED_ON_L2,
-            gas_price=state.general_config.min_gas_price,
+            gas_price=state.state.block_info.gas_price,
             sequencer_address=state.general_config.sequencer_address,
             parent_block_hash=parent_block_hash
         )
@@ -138,7 +139,12 @@ class DevnetBlocks():
         self.__hash2num[block_hash] = block_number
 
         if state_update is not None:
-            state_update["block_hash"] = hex(block_hash)
+            state_update = BlockStateUpdate(
+                block_hash=block_hash,
+                old_root=state_update.old_root,
+                new_root=state_update.new_root,
+                state_diff=state_update.state_diff,
+            )
 
         self.__state_updates[block_number] = state_update
 

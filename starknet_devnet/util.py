@@ -6,15 +6,23 @@ from dataclasses import dataclass
 from enum import Enum, auto
 import argparse
 import sys
+from typing import List, Dict
 
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.testing.contract import StarknetContract
 from starkware.starknet.business_logic.state.state import CarriedState
+from starkware.starknet.services.api.feeder_gateway.response_objects import (
+    BlockStateUpdate, StateDiff, StorageEntry, DeployedContract
+)
 
 from . import __version__
-
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 5050
+from .constants import (
+    DEFAULT_ACCOUNTS,
+    DEFAULT_GAS_PRICE,
+    DEFAULT_HOST,
+    DEFAULT_INITIAL_BALANCE,
+    DEFAULT_PORT
+)
 
 def custom_int(arg: str) -> int:
     """
@@ -29,6 +37,24 @@ def fixed_length_hex(arg: int) -> str:
     Converts the int input to a hex output of fixed length
     """
     return f"0x{arg:064x}"
+
+@dataclass
+class Uint256:
+    """Abstraction of Uint256 type"""
+    low: int
+    high: int
+
+    def to_felt(self) -> int:
+        """Converts to felt."""
+        return (self.high << 128) + self.low
+
+    @staticmethod
+    def from_felt(felt: int) -> "Uint256":
+        """Converts felt to Uint256"""
+        return Uint256(
+            low=felt & ((1 << 128) - 1),
+            high=felt >> 128
+        )
 
 # Uncomment this once fork support is added
 # def _fork_url(name: str):
@@ -82,7 +108,7 @@ def parse_args():
     )
     parser.add_argument(
         "--host",
-        help=f"Specify the address to listen at; defaults to {DEFAULT_HOST}" +
+        help=f"Specify the address to listen at; defaults to {DEFAULT_HOST} " +
              "(use the address the program outputs on start)",
         default=DEFAULT_HOST
     )
@@ -108,7 +134,7 @@ def parse_args():
     parser.add_argument(
         "--lite-mode",
         action='store_true',
-        help="Applies all optimizations by disabling some features. These can be applied individually by using other flags instead of this one."
+        help="Applies all lite-mode-* optimizations by disabling some features."
     )
     parser.add_argument(
         "--lite-mode-block-hash",
@@ -121,9 +147,34 @@ def parse_args():
         help="Disables deploy tx hash calculation"
     )
     parser.add_argument(
+        "--accounts",
+        type=int,
+        help=f"Specify the number of accounts to be predeployed; defaults to {DEFAULT_ACCOUNTS}",
+        default=DEFAULT_ACCOUNTS
+    )
+    parser.add_argument(
+        "--initial-balance", "-e",
+        type=int,
+        help="Specify the initial balance of accounts to be predeployed; " +
+             f"defaults to {DEFAULT_INITIAL_BALANCE:g}",
+        default=DEFAULT_INITIAL_BALANCE
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Specify the seed for randomness of accounts to be predeployed"
+    )
+    parser.add_argument(
         "--start-time",
         action=NonNegativeAction,
-        help="Specify the start time of the genesis block in Unix time"
+        help="Specify the start time of the genesis block in Unix time seconds"
+    )
+    parser.add_argument(
+        "--gas-price", "-g",
+        type=int,
+        default=DEFAULT_GAS_PRICE,
+        help="Specify the gas price in wei per gas unit; " +
+             f"defaults to {DEFAULT_GAS_PRICE:g}"
     )
     # Uncomment this once fork support is added
     # parser.add_argument(
@@ -152,7 +203,9 @@ class StarknetDevnetException(StarkException):
 class DummyCallInfo:
     """Used temporarily until contracts received from starknet.deploy include their own execution_info.call_info"""
     def __init__(self):
-        self.execution_resources = {}
+        self.execution_resources = None
+        self.contract_address = None
+        self.events = []
 
 @dataclass
 class DummyExecutionInfo:
@@ -186,57 +239,58 @@ def enable_pickling():
     StarknetContract.__getstate__ = contract_getstate
     StarknetContract.__setstate__ = contract_setstate
 
-def generate_storage_diff(previous_storage_updates, storage_updates):
+def generate_storage_diff(previous_storage_updates, storage_updates) -> List[StorageEntry]:
     """
     Returns storage diff between previous and current storage updates
     """
-    if not previous_storage_updates:
-        return []
-
     storage_diff = []
 
     for storage_key, leaf in storage_updates.items():
-        previous_leaf = previous_storage_updates.get(storage_key)
+        previous_leaf = previous_storage_updates.get(storage_key) if previous_storage_updates else None
 
         if previous_leaf is None or previous_leaf.value != leaf.value:
-            storage_diff.append({
-                "key": hex(storage_key),
-                "value": hex(leaf.value)
-            })
+            storage_diff.append(StorageEntry(
+                key=storage_key,
+                value=leaf.value
+                )
+            )
 
     return storage_diff
 
 
-def generate_state_update(previous_state: CarriedState, current_state: CarriedState):
+def generate_state_update(previous_state: CarriedState, current_state: CarriedState) -> BlockStateUpdate:
     """
     Returns roots, deployed contracts and storage diffs between 2 states
     """
-    deployed_contracts = []
-    storage_diffs = {}
+    deployed_contracts: List[DeployedContract] = []
+    storage_diffs: Dict[int, List[StorageEntry]] = {}
 
     for contract_address in current_state.contract_states.keys():
         if contract_address not in previous_state.contract_states:
-            deployed_contracts.append({
-                "address": fixed_length_hex(contract_address),
-                "contract_hash": current_state.contract_states[contract_address].state.contract_hash.hex()
-            })
+            deployed_contracts.append(
+                DeployedContract(
+                    address=contract_address,
+                    class_hash=current_state.contract_states[contract_address].state.contract_hash
+                )
+            )
         else:
             previous_storage_updates = previous_state.contract_states[contract_address].storage_updates
             storage_updates = current_state.contract_states[contract_address].storage_updates
             storage_diff = generate_storage_diff(previous_storage_updates, storage_updates)
 
             if len(storage_diff) > 0:
-                contract_address_hexed = fixed_length_hex(contract_address)
-                storage_diffs[contract_address_hexed] = storage_diff
+                storage_diffs[contract_address] = storage_diff
 
-    new_root = current_state.shared_state.contract_states.root.hex()
-    old_root = previous_state.shared_state.contract_states.root.hex()
+    new_root = current_state.shared_state.contract_states.root
+    old_root = previous_state.shared_state.contract_states.root
+    state_diff = StateDiff(
+        deployed_contracts=deployed_contracts,
+        storage_diffs=storage_diffs,
+    )
 
-    return {
-        "new_root": new_root,
-        "old_root": old_root,
-        "state_diff": {
-            "deployed_contracts": deployed_contracts,
-            "storage_diffs": storage_diffs
-        }
-    }
+    return BlockStateUpdate(
+        block_hash=None,
+        new_root=new_root,
+        old_root=old_root,
+        state_diff=state_diff
+    )

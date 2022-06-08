@@ -85,7 +85,7 @@ def get_code():
 @feeder_gateway.route("/get_full_contract", methods=["GET"])
 def get_full_contract():
     """
-    Returns the contract definition of the contract whose contractAddress is provided.
+    Returns the contract class of the contract whose contractAddress is provided.
     """
     _check_block_hash(request.args)
 
@@ -158,6 +158,9 @@ def get_state_update():
     block_number = request.args.get("blockNumber", type=custom_int)
 
     state_update = state.starknet_wrapper.blocks.get_state_update(block_hash=block_hash, block_number=block_number)
+
+    if state_update is not None:
+        return Response(response=state_update.dumps(), status=200, mimetype="application/json")
 
     return jsonify(state_update)
 
