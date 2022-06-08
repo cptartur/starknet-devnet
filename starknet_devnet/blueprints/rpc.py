@@ -328,6 +328,7 @@ async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_
         return transactions_and_receipts
 
     def new_root() -> str:
+        # pylint: disable=no-member
         return rpc_root(block.state_root.hex())
 
     def old_root() -> str:
