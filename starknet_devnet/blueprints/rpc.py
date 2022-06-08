@@ -39,6 +39,8 @@ async def base_route():
 
     try:
         result = await method(*args) if isinstance(args, list) else await method(**args)
+    except NotImplementedError:
+        return rpc_error(message_id=message_id, code=-2, message="Method not implemented")
     except RpcError as error:
         return rpc_error(message_id=message_id, code=error.code, message=error.message)
 
