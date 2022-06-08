@@ -55,8 +55,11 @@ def gateway_call(method: str, **kwargs):
 
 @pytest.fixture(name="contract_definition")
 def fixture_contract_definition() -> ContractDefinition:
-    tx: Deploy = typing.cast(Deploy, Transaction.loads(DEPLOY_CONTENT))
-    return tx.contract_definition
+    """
+    Make ContractDefinition from deployment transaction used in tests
+    """
+    transaction: Deploy = typing.cast(Deploy, Transaction.loads(DEPLOY_CONTENT))
+    return transaction.contract_definition
 
 
 @pytest.fixture(name="deploy_info", scope="module")
