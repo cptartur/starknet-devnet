@@ -415,7 +415,7 @@ def rpc_state_update(state_update: dict) -> RpcStateUpdate:
         for contract in state_update["state_diff"]["deployed_contracts"]:
             diff: RpcContractDiff = {
                 "address": contract["address"],
-                "contract_hash": contract["contract_hash"]
+                "contract_hash": rpc_felt(int(contract["contract_hash"], 16))
             }
             _contracts.append(diff)
         return _contracts
