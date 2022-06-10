@@ -19,7 +19,8 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
     TransactionReceipt,
     TransactionStatus,
     TransactionSpecificInfo,
-    TransactionType
+    TransactionType,
+    BlockStateUpdate
 )
 
 from starknet_devnet.state import state
@@ -398,39 +399,40 @@ class RpcStateUpdate(TypedDict):
     state_diff: RpcStateDiff
 
 
-def rpc_state_update(state_update: dict) -> RpcStateUpdate:
+def rpc_state_update(state_update: BlockStateUpdate) -> RpcStateUpdate:
     """
     Convert gateway state update to rpc state update
     """
     def storage_diffs() -> List[RpcStorageDiff]:
         _storage_diffs = []
-        for address, storage in state_update["state_diff"]["storage_diffs"].items():
-            diff: RpcStorageDiff = {
-                "address": address,
-                "key": storage["key"],
-                "value": storage["value"]
-            }
-            _storage_diffs.append(diff)
+        for address, diffs in state_update.state_diff.storage_diffs.items():
+            for diff in diffs:
+                _diff: RpcStorageDiff = {
+                    "address": rpc_felt(address),
+                    "key": rpc_felt(diff.key),
+                    "value": rpc_felt(diff.value),
+                }
+                _storage_diffs.append(_diff)
         return _storage_diffs
 
     def contracts() -> List[RpcContractDiff]:
         _contracts = []
-        for contract in state_update["state_diff"]["deployed_contracts"]:
+        for contract in state_update.state_diff.deployed_contracts:
             diff: RpcContractDiff = {
-                "address": contract["address"],
-                "contract_hash": rpc_felt(int(contract["contract_hash"], 16))
+                "address": rpc_felt(contract.address),
+                "contract_hash": "0x0" + contract.class_hash.hex().lstrip("0")
             }
             _contracts.append(diff)
         return _contracts
 
     def timestamp() -> int:
-        block = state.starknet_wrapper.blocks.get_by_hash(block_hash=state_update["block_hash"])
+        block = state.starknet_wrapper.blocks.get_by_hash(block_hash=hex(state_update.block_hash))
         return block.timestamp
 
     rpc_state: RpcStateUpdate = {
-        "block_hash": state_update["block_hash"],
-        "new_root": rpc_root(state_update["new_root"]),
-        "old_root": rpc_root(state_update["old_root"]),
+        "block_hash": rpc_felt(state_update.block_hash),
+        "new_root": "0x0" + state_update.new_root.hex().lstrip("0"),
+        "old_root": "0x0" + state_update.old_root.hex().lstrip("0"),
         "accepted_time": timestamp(),
         "state_diff": {
             "storage_diffs": storage_diffs(),
@@ -644,7 +646,7 @@ def rpc_error(message_id: int, code: int, message: str) -> dict:
 
 def rpc_felt(value: int) -> str:
     """
-    Convert 0x prefixed felt to 0x0 prefixed felt
+    Convert integer to 0x0 prefixed felt
     """
     return "0x0" + hex(value).lstrip("0x")
 
