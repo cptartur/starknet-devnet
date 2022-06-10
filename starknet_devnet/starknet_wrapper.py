@@ -8,14 +8,21 @@ from copy import deepcopy
 from typing import Dict, List, Tuple
 
 import cloudpickle as pickle
-from starkware.starknet.business_logic.internal_transaction import InternalInvokeFunction, InternalDeploy
+from starkware.starknet.business_logic.internal_transaction import (
+    InternalInvokeFunction,
+    InternalDeclare,
+    InternalDeploy,
+)
 from starkware.starknet.business_logic.state.state import CarriedState
 from starkware.starknet.core.os.contract_address.contract_address import calculate_contract_address
-from starkware.starknet.services.api.gateway.transaction import InvokeFunction, Deploy
+from starkware.starknet.services.api.gateway.transaction import InvokeFunction, Deploy, Declare
 from starkware.starknet.testing.starknet import Starknet
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.business_logic.transaction_fee import calculate_tx_fee
+from starkware.starknet.services.api.contract_class import EntryPointType
 from starkware.starknet.services.api.feeder_gateway.response_objects import TransactionStatus
+from starkware.starknet.testing.objects import TransactionExecutionInfo
+from starkware.starknet.testing.contract import StarknetContract
 
 from .account import Account
 from .fee_token import FeeToken
@@ -177,9 +184,44 @@ class StarknetWrapper:
         self.config = config
         self.blocks.lite = config.lite_mode_block_hash
 
+    async def declare(self, declare_transaction: Declare) -> Tuple[int, int]:
+        """
+        Declares the class specified with `declare_transaction`
+        Returns (class_hash, transaction_hash)
+        """
+
+        starknet = await self.__get_starknet()
+        internal_declare: InternalDeclare = InternalDeclare.from_external(
+            declare_transaction,
+            starknet.state.general_config
+        )
+        declared_class = await starknet.declare(
+            contract_class=declare_transaction.contract_class,
+        )
+        self.contracts.store_class(declared_class.class_hash, declare_transaction.contract_class)
+
+        tx_hash = internal_declare.hash_value
+        transaction = DevnetTransaction(
+            internal_tx=internal_declare,
+            status=TransactionStatus.ACCEPTED_ON_L2,
+            execution_info=DummyExecutionInfo(),
+            transaction_hash=tx_hash
+        )
+
+        state_update = await self.__update_state()
+
+        await self.__store_transaction(
+            transaction=transaction,
+            tx_hash=tx_hash,
+            state_update=state_update,
+            error_message=None
+        )
+
+        return declared_class.class_hash, tx_hash
+
     async def deploy(self, deploy_transaction: Deploy) -> Tuple[int, int]:
         """
-        Deploys the contract specified with `transaction`.
+        Deploys the contract specified with `deploy_transaction`.
         Returns (contract_address, transaction_hash).
         """
 
@@ -269,6 +311,8 @@ class StarknetWrapper:
             tx_hash=transaction.transaction_hash
         )
 
+        await self.__register_new_contracts(execution_info)
+
         return invoke_function.contract_address, invoke_transaction.hash_value, { "result": adapted_result }
 
     async def call(self, transaction: InvokeFunction):
@@ -284,6 +328,15 @@ class StarknetWrapper:
         )
 
         return { "result": adapted_result }
+
+    async def __register_new_contracts(self, execution_info: TransactionExecutionInfo):
+        for internal_call in execution_info.call_info.internal_calls:
+            if internal_call.entry_point_type == EntryPointType.CONSTRUCTOR:
+                state = await self.get_state()
+                contract_class = state.state.get_contract_class(internal_call.class_hash)
+                contract = StarknetContract(state, contract_class.abi, internal_call.contract_address, None)
+                contract_wrapper = ContractWrapper(contract, contract_class)
+                self.contracts.store(internal_call.contract_address, contract_wrapper)
 
     async def get_storage_at(self, contract_address: int, key: int) -> str:
         """

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "starknet_devnet"
-version = "0.2.2"
+version = "0.2.3"
 description = "A local testnet for Starknet"
 authors = ["FabijanC <fabijan.corak@gmail.com>"]
 license = "ISC"
@@ -37,6 +37,7 @@ markers = [
     "account",
     "account_predeployed",
     "call",
+    "declare",
     "deploy",
     "fee_token",
     "invoke",

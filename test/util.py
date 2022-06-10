@@ -54,6 +54,10 @@ def assert_equal(actual, expected, explanation=None):
     """Assert that the two values are equal. Optionally provide explanation."""
     assert actual == expected, f"\nActual: {actual}\nExpected: {expected}\nAdditional_info: {explanation}"
 
+def assert_hex_equal(actual, expected):
+    """Assert that two hex strings are equal when converted to ints"""
+    assert int(actual, 16) == int(expected, 16)
+
 def extract(regex, stdout):
     """Extract from `stdout` what matches `regex`."""
     matched = re.search(regex, stdout)
@@ -61,7 +65,11 @@ def extract(regex, stdout):
         return matched.group(1)
     raise RuntimeError(f"Cannot extract from {stdout}")
 
-def extract_hash(stdout):
+def extract_class_hash(stdout):
+    """Extract class hash from stdout."""
+    return extract(r"Contract class hash: (\w*)", stdout)
+
+def extract_tx_hash(stdout):
     """Extract tx_hash from stdout."""
     return extract(r"Transaction hash: (\w*)", stdout)
 
@@ -88,6 +96,15 @@ def run_starknet(args, raise_on_nonzero=True, add_gateway_urls=True):
         raise ReturnCodeAssertionError(output.stdout)
     return output
 
+def declare(contract):
+    """Wrapper around starknet declare"""
+    args = ["declare", "--contract", contract]
+    output = run_starknet(args)
+    return {
+        "tx_hash": extract_tx_hash(output.stdout),
+        "class_hash": extract_class_hash(output.stdout)
+    }
+
 def deploy(contract, inputs=None, salt=None):
     """Wrapper around starknet deploy"""
     args = ["deploy", "--contract", contract]
@@ -97,7 +114,7 @@ def deploy(contract, inputs=None, salt=None):
         args.extend(["--salt", salt])
     output = run_starknet(args)
     return {
-        "tx_hash": extract_hash(output.stdout),
+        "tx_hash": extract_tx_hash(output.stdout),
         "address": extract_address(output.stdout)
     }
 
@@ -175,7 +192,7 @@ def invoke(function, inputs, address, abi_path, signature=None, max_fee=None):
     output = run_starknet(args)
 
     print("Invoke successful!")
-    return extract_hash(output.stdout)
+    return extract_tx_hash(output.stdout)
 
 
 def estimate_fee(function, inputs, address, abi_path, signature=None):
@@ -239,14 +256,11 @@ def assert_contract_code(address):
     # just checking key equality
     assert_equal(sorted(code.keys()), ["abi", "bytecode"])
 
-def assert_contract_class(address, contract_path):
-    """Asserts the content of the contract class of a contract at address."""
-    output = run_starknet(["get_full_contract", "--contract_address", address])
-    contract_class: ContractClass = ContractClass.load(json.loads(output.stdout))
+def assert_contract_class(actual_class: ContractClass, expected_class_path: str):
+    """Asserts equality between `actual_class` and class at `expected_class_path`."""
 
-    loaded_contract_class = load_contract_class(contract_path)
-
-    assert_equal(contract_class, loaded_contract_class.remove_debug_info())
+    loaded_contract_class = load_contract_class(expected_class_path)
+    assert_equal(actual_class, loaded_contract_class.remove_debug_info())
 
 def assert_storage(address, key, expected_value):
     """Asserts the storage value stored at (address, key)."""
@@ -266,6 +280,21 @@ def get_transaction_receipt(tx_hash):
     """Fetches the transaction receipt of transaction with tx_hash"""
     output = run_starknet(["get_transaction_receipt", "--hash", tx_hash])
     return json.loads(output.stdout)
+
+def get_full_contract(contract_address: str) -> ContractClass:
+    """Gets contract class by contract address"""
+    output = run_starknet(["get_full_contract", "--contract_address", contract_address])
+    return ContractClass.loads(output.stdout)
+
+def get_class_hash_at(contract_address: str) -> str:
+    """Gets class hash at given contract address"""
+    output = run_starknet(["get_class_hash_at", "--contract_address", contract_address])
+    return json.loads(output.stdout)
+
+def get_class_by_hash(class_hash: str) -> str:
+    """Gets contract class by contract hash"""
+    output = run_starknet(["get_class_by_hash", "--class_hash", class_hash])
+    return ContractClass.loads(output.stdout)
 
 def assert_receipt(tx_hash, expected_path):
     """Asserts the content of the receipt of tx with tx_hash."""
