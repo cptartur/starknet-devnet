@@ -420,7 +420,7 @@ def rpc_state_update(state_update: BlockStateUpdate) -> RpcStateUpdate:
         for contract in state_update.state_diff.deployed_contracts:
             diff: RpcContractDiff = {
                 "address": rpc_felt(contract.address),
-                "contract_hash": "0x0" + contract.class_hash.hex().lstrip("0")
+                "contract_hash": rpc_root(contract.class_hash.hex())
             }
             _contracts.append(diff)
         return _contracts
@@ -656,7 +656,7 @@ def rpc_root(root: str) -> str:
     Convert 0 prefixed root to 0x prefixed root
     """
     root = root[1:]
-    return "0x" + root
+    return "0x0" + root
 
 
 def parse_body(body: dict) -> Tuple[Callable, Union[List, dict], int]:

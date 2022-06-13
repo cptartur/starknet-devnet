@@ -112,8 +112,8 @@ def test_get_block_by_number(deploy_info):
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
-    assert block["old_root"] == "0x" + "0" * 63
-    assert block["new_root"][2:] == new_root[1:]
+    assert block["old_root"] == "0x0" + "0" * 63
+    assert block["new_root"] == pad_zero(new_root)
     assert block["transactions"] == [transaction_hash]
 
 
@@ -150,8 +150,8 @@ def test_get_block_by_hash(deploy_info):
     assert block["block_number"] == 0
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
-    assert block["old_root"] == "0x" + "0" * 63
-    assert block["new_root"][2:] == new_root[1:]
+    assert block["old_root"] == "0x0" + "0" * 63
+    assert block["new_root"] == pad_zero(new_root)
     assert block["transactions"] == [transaction_hash]
 
 
