@@ -431,8 +431,8 @@ def rpc_state_update(state_update: BlockStateUpdate) -> RpcStateUpdate:
 
     rpc_state: RpcStateUpdate = {
         "block_hash": rpc_felt(state_update.block_hash),
-        "new_root": "0x0" + state_update.new_root.hex().lstrip("0"),
-        "old_root": "0x0" + state_update.old_root.hex().lstrip("0"),
+        "new_root": rpc_root(state_update.new_root.hex()),
+        "old_root": rpc_root(state_update.old_root.hex()),
         "accepted_time": timestamp(),
         "state_diff": {
             "storage_diffs": storage_diffs(),
