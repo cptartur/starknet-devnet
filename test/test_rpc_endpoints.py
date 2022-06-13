@@ -265,6 +265,7 @@ def test_get_state_update_by_hash(deploy_info, invoke_info, contract_definition)
         ],
     }
 
+    storage = gateway_call("get_storage_at", contractAddress=contract_address, key=get_storage_var_address("balance"))
     resp = rpc_call(
         "starknet_getStateUpdateByHash", params={
             "block_hash": block_with_invoke_hash
@@ -282,8 +283,8 @@ def test_get_state_update_by_hash(deploy_info, invoke_info, contract_definition)
             {
                 "address": contract_address,
                 "key": pad_zero(hex(get_storage_var_address("balance"))),
-                "value": "0x0",  # FIXME it seems like tests using app.test_client (not actually running devnet in
-            }                    #  background, doesn't properly update state diff. It works in actual devnet though.w
+                "value": storage,
+            }
         ],
         "contracts": [],
     }
