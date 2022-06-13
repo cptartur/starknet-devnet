@@ -25,7 +25,6 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
 
 from starknet_devnet.state import state
 from ..util import StarknetDevnetException
-from ..general_config import DEFAULT_GENERAL_CONFIG
 
 rpc = Blueprint("rpc", __name__, url_prefix="/rpc")
 
@@ -248,7 +247,9 @@ async def chain_id() -> str:
     """
     Return the currently configured StarkNet chain id
     """
-    chain: int = DEFAULT_GENERAL_CONFIG.chain_id.value
+    devnet_state = await state.starknet_wrapper.get_state()
+    config = devnet_state.general_config
+    chain: int = config.chain_id.value
     return hex(chain)
 
 
@@ -349,12 +350,15 @@ async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_
     }
     transactions: list = await mapping[requested_scope]()
 
+    devnet_state = await state.starknet_wrapper.get_state()
+    config = devnet_state.general_config
+
     block: RpcBlock = {
         "block_hash": rpc_felt(block.block_hash),
         "parent_hash": rpc_felt(block.parent_block_hash) or "0x0",
         "block_number": block.block_number if block.block_number is not None else 0,
         "status": block.status.name,
-        "sequencer": hex(DEFAULT_GENERAL_CONFIG.sequencer_address),
+        "sequencer": hex(config.sequencer_address),
         "new_root": new_root(),
         "old_root": old_root(),
         "accepted_time": block.timestamp,
