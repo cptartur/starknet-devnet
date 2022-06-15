@@ -53,8 +53,8 @@ def gateway_call(method: str, **kwargs):
     return json.loads(resp.data.decode("utf-8"))
 
 
-@pytest.fixture(name="contract_definition")
-def fixture_contract_definition() -> ContractClass:
+@pytest.fixture(name="contract_class")
+def fixture_contract_class() -> ContractClass:
     """
     Make ContractDefinition from deployment transaction used in tests
     """
@@ -227,7 +227,7 @@ def test_get_block_by_hash_raises_on_incorrect_hash(deploy_info):
     }
 
 
-def test_get_state_update_by_hash(deploy_info, invoke_info, contract_definition):
+def test_get_state_update_by_hash(deploy_info, invoke_info, contract_class):
     """
     Get state update for the block
     """
@@ -260,7 +260,7 @@ def test_get_state_update_by_hash(deploy_info, invoke_info, contract_definition)
         "contracts": [
             {
                 "address": contract_address,
-                "contract_hash": pad_zero(hex(compute_class_hash(contract_definition))),
+                "contract_hash": pad_zero(hex(compute_class_hash(contract_class))),
             }
         ],
     }
