@@ -18,6 +18,7 @@ Aims to mimic Starknet's Alpha testnet, but with simplified functionality.
 - [Restart](#restart)
 - [Advancing time](#advancing-time)
 - [Contract debugging](#contract-debugging)
+- [Predeployed accounts](#predeployed-accounts)
 - [Devnet speed-up troubleshooting](#devnet-speed-up-troubleshooting)
 - [Development](#development)
 
@@ -180,7 +181,7 @@ This method of L1 <> L2 communication testing differs from Starknet Alpha networ
 
 ```
 constructor(IStarknetCore starknetCore_) public {
-        starknetCore = starknetCore_;
+    starknetCore = starknetCore_;
 }
 ```
 
@@ -353,7 +354,7 @@ Response:
 
 ```json
 {
-  "amount": <AMOUNT>,
+  "amount": 123...456,
   "unit": "wei"
 }
 ```
