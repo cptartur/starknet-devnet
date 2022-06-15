@@ -19,8 +19,8 @@ from .util import load_file_content
 from .test_endpoints import send_transaction
 
 
-DEPLOY_CONTENT = load_file_content("deploy.json")
-INVOKE_CONTENT = load_file_content("invoke.json")
+DEPLOY_CONTENT = load_file_content("deploy_rpc.json")
+INVOKE_CONTENT = load_file_content("invoke_rpc.json")
 
 
 def rpc_call(method: str, params: dict | list) -> dict:
@@ -84,6 +84,13 @@ def fixture_invoke_info() -> dict:
     return invoke_info
 
 
+def get_block_with_transaction(transaction_hash: str) -> dict:
+    transaction = gateway_call("get_transaction", transactionHash=transaction_hash)
+    block_number: int = transaction["block_number"]
+    block = gateway_call("get_block", blockNumber=block_number)
+    return block
+
+
 def pad_zero(felt: str) -> str:
     """
     Convert felt with format `0xValue` to format `0x0Value`
@@ -97,22 +104,23 @@ def test_get_block_by_number(deploy_info):
     """
     Get block by number
     """
-    block: dict = gateway_call("get_block", blockNumber=0)
-    block_hash: str = block["block_hash"]
-    new_root: str = block["state_root"]
+    gateway_block: dict = get_block_with_transaction(deploy_info["transaction_hash"])
+    block_hash: str = gateway_block["block_hash"]
+    block_number: int = gateway_block["block_number"]
+    new_root: str = gateway_block["state_root"]
 
     resp = rpc_call(
-        "starknet_getBlockByNumber", params={"block_number": 0}
+        "starknet_getBlockByNumber", params={"block_number": block_number}
     )
     block = resp["result"]
     transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
 
     assert block["block_hash"] == pad_zero(block_hash)
-    assert block["parent_hash"] == "0x0"
-    assert block["block_number"] == 0
+    assert block["parent_hash"] == pad_zero(gateway_block["parent_block_hash"])
+    assert block["block_number"] == block_number
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
-    assert block["old_root"] == "0x0" + "0" * 63
+    assert block["old_root"] != ""
     assert block["new_root"] == pad_zero(new_root)
     assert block["transactions"] == [transaction_hash]
 
@@ -135,9 +143,9 @@ def test_get_block_by_hash(deploy_info):
     """
     Get block by hash
     """
-    block: dict = gateway_call("get_block", blockNumber=0)
-    block_hash: str = block["block_hash"]
-    new_root: str = block["state_root"]
+    gateway_block: dict = get_block_with_transaction(deploy_info["transaction_hash"])
+    block_hash: str = gateway_block["block_hash"]
+    new_root: str = gateway_block["state_root"]
     transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
 
     resp = rpc_call(
@@ -146,11 +154,11 @@ def test_get_block_by_hash(deploy_info):
     block = resp["result"]
 
     assert block["block_hash"] == pad_zero(block_hash)
-    assert block["parent_hash"] == "0x0"
-    assert block["block_number"] == 0
+    assert block["parent_hash"] == pad_zero(gateway_block["parent_block_hash"])
+    assert block["block_number"] == gateway_block["block_number"]
     assert block["status"] == "ACCEPTED_ON_L2"
     assert block["sequencer"] == hex(DEFAULT_GENERAL_CONFIG.sequencer_address)
-    assert block["old_root"] == "0x0" + "0" * 63
+    assert block["old_root"] != ""
     assert block["new_root"] == pad_zero(new_root)
     assert block["transactions"] == [transaction_hash]
 
@@ -159,7 +167,7 @@ def test_get_block_by_hash_full_txn_scope(deploy_info):
     """
     Get block by hash with scope FULL_TXNS
     """
-    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+    block_hash: str = get_block_with_transaction(deploy_info["transaction_hash"])["block_hash"]
     transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
     contract_address: str = pad_zero(deploy_info["address"])
 
@@ -185,7 +193,7 @@ def test_get_block_by_hash_full_txn_and_receipts_scope(deploy_info):
     """
     Get block by hash with scope FULL_TXN_AND_RECEIPTS
     """
-    block_hash: str = gateway_call("get_block", blockNumber=0)["block_hash"]
+    block_hash: str = get_block_with_transaction(deploy_info["transaction_hash"])["block_hash"]
     transaction_hash: str = pad_zero(deploy_info["transaction_hash"])
     contract_address: str = pad_zero(deploy_info["address"])
 
@@ -231,8 +239,8 @@ def test_get_state_update_by_hash(deploy_info, invoke_info, contract_class):
     """
     Get state update for the block
     """
-    block_with_deploy = gateway_call("get_block", blockNumber=0)
-    block_with_invoke = gateway_call("get_block", blockNumber=1)
+    block_with_deploy = get_block_with_transaction(deploy_info["transaction_hash"])
+    block_with_invoke = get_block_with_transaction(invoke_info["transaction_hash"])
 
     contract_address: str = deploy_info["address"]
     block_with_deploy_hash: str = pad_zero(block_with_deploy["block_hash"])
@@ -338,7 +346,7 @@ def test_get_storage_at_raises_on_incorrect_key(deploy_info):
     """
     Get storage at incorrect key
     """
-    block = gateway_call("get_block", blockNumber=0)
+    block = get_block_with_transaction(deploy_info["transaction_hash"])
 
     contract_address: str = deploy_info["address"]
     block_hash: str = block["block_hash"]
@@ -421,7 +429,7 @@ def test_get_transaction_by_block_hash_and_index(deploy_info):
     """
     Get transaction by block hash and transaction index
     """
-    block = gateway_call("get_block", blockNumber=0)
+    block = get_block_with_transaction(deploy_info["transaction_hash"])
     transaction_hash: str = deploy_info["transaction_hash"]
     contract_address: str = deploy_info["address"]
     block_hash: str = block["block_hash"]
@@ -465,7 +473,7 @@ def test_get_transaction_by_block_hash_and_index_raises_on_incorrect_index(deplo
     """
     Get transaction by block hash and incorrect transaction index
     """
-    block = gateway_call("get_block", blockNumber=0)
+    block = get_block_with_transaction(deploy_info["transaction_hash"])
     block_hash: str = block["block_hash"]
 
     ex = rpc_call(
@@ -487,7 +495,8 @@ def test_get_transaction_by_block_number_and_index(deploy_info):
     """
     transaction_hash: str = deploy_info["transaction_hash"]
     contract_address: str = deploy_info["address"]
-    block_number: int = 0
+    block = get_block_with_transaction(transaction_hash)
+    block_number: int = block["block_number"]
     index: int = 0
 
     resp = rpc_call(
@@ -619,7 +628,7 @@ def test_get_block_transaction_count_by_hash(deploy_info):
     """
     Get count of transactions in block by block hash
     """
-    block = gateway_call("get_block", blockNumber=0)
+    block = get_block_with_transaction(deploy_info["transaction_hash"])
     block_hash: str = block["block_hash"]
 
     resp = rpc_call(

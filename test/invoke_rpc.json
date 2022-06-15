@@ -1,0 +1,9 @@
+{
+    "entry_point_selector": "0x362398bec32bc0ebb411203221a35a0301193a96f317ebe5e40be9f60d15320",
+    "calldata": [
+        "10"
+    ],
+    "signature": [],
+    "contract_address": "0x022675a4cfedcb8e029e31e71d282ee40b058134424d7560dbc5c3cdbd087d3d",
+    "type": "INVOKE_FUNCTION"
+}
