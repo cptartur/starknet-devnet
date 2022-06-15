@@ -85,6 +85,9 @@ def fixture_invoke_info() -> dict:
 
 
 def get_block_with_transaction(transaction_hash: str) -> dict:
+    """
+    Retrieve block for given transaction
+    """
     transaction = gateway_call("get_transaction", transactionHash=transaction_hash)
     block_number: int = transaction["block_number"]
     block = gateway_call("get_block", blockNumber=block_number)
