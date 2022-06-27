@@ -4,8 +4,11 @@ rpc version: 0.8.0
 """
 from __future__ import annotations
 
+import base64
 import json
 from typing import Callable, Union, List, Tuple, Optional, Any
+
+from starkware.starknet.services.api.contract_class import ContractClass, EntryPointType
 from typing_extensions import TypedDict
 
 from flask import Blueprint, request
@@ -181,6 +184,37 @@ async def get_code(contract_address: str) -> dict:
     }
 
 
+async def get_class(class_hash: str) -> dict:
+    """
+    Get the code of a specific contract
+    """
+    try:
+        result = state.starknet_wrapper.contracts.get_class_by_hash(class_hash=int(class_hash, 16))
+    except StarknetDevnetException as ex:
+        raise RpcError(code=28, message="The supplied contract class hash is invalid or unknown") from ex
+
+    return rpc_contract_class(result)
+
+
+async def get_class_hash_at(contract_address: str) -> str:
+    try:
+        result = state.starknet_wrapper.contracts.get_class_hash_at(address=int(contract_address, 16))
+    except StarknetDevnetException as ex:
+        raise RpcError(code=28, message="The supplied contract class hash is invalid or unknown") from ex
+
+    return rpc_felt(result)
+
+
+async def get_class_at(contract_address: str) -> dict:
+    try:
+        class_hash = state.starknet_wrapper.contracts.get_class_hash_at(address=int(contract_address, 16))
+        result = state.starknet_wrapper.contracts.get_class_by_hash(class_hash=class_hash)
+    except StarknetDevnetException as ex:
+        raise RpcError(code=20, message="Contract not found") from ex
+
+    return rpc_contract_class(result)
+
+
 async def get_block_transaction_count_by_hash(block_hash: str) -> int:
     """
     Get the number of transactions in a block given a block hash
@@ -233,6 +267,10 @@ async def call(contract_address: str, entry_point_selector: str, calldata: list,
         if "While handling calldata" in ex.message:
             raise RpcError(code=22, message="Invalid call data") from ex
         raise RpcError(code=-1, message=ex.message) from ex
+
+
+async def estimate_fee():
+    pass
 
 
 async def get_block_number() -> int:
@@ -294,6 +332,59 @@ def make_invoke_function(request_body: dict) -> InvokeFunction:
         version=0,
         signature=[],
     )
+
+
+class EntryPoint(TypedDict):
+    offset: str
+    selector: str
+
+
+class EntryPoints(TypedDict):
+    CONSTRUCTOR: List[EntryPoint]
+    EXTERNAL: List[EntryPoint]
+    L1_HANDLER: List[EntryPoint]
+
+
+class RpcContractClass(TypedDict):
+    program: str
+    entry_point_by_type: EntryPoints
+
+
+def rpc_contract_class(contract_class: ContractClass) -> RpcContractClass:
+    """
+    Convert gateway contract class to rpc contract class
+    """
+    def program() -> str:
+        prog: str = contract_class.program.Schema().dumps(contract_class.program)
+        prog_encoded = prog.encode("ascii")
+        prog_base64 = base64.b64encode(prog_encoded)
+        return prog_base64.decode()
+
+    def entry_point_by_type() -> EntryPoints:
+        _entry_points = {
+            EntryPointType.CONSTRUCTOR: [],
+            EntryPointType.EXTERNAL: [],
+            EntryPointType.L1_HANDLER: [],
+        }
+        for typ, entry_points in contract_class.entry_points_by_type.items():
+            for entry_point in entry_points:
+                _entry_point: EntryPoint = {
+                    "selector": rpc_felt(entry_point.selector),
+                    "offset": rpc_felt(entry_point.offset)
+                }
+                _entry_points[typ].append(_entry_point)
+        entry_points: EntryPoints = {
+            "CONSTRUCTOR": _entry_points[EntryPointType.CONSTRUCTOR],
+            "EXTERNAL": _entry_points[EntryPointType.EXTERNAL],
+            "L1_HANDLER": _entry_points[EntryPointType.L1_HANDLER],
+        }
+        return entry_points
+
+    _contract_class: RpcContractClass = {
+        "program": program(),
+        "entry_point_by_type": entry_point_by_type()
+    }
+    return _contract_class
 
 
 class RpcBlock(TypedDict):
@@ -686,6 +777,10 @@ def parse_body(body: dict) -> Tuple[Callable, Union[List, dict], int]:
         "protocolVersion": protocol_version,
         "syncing": syncing,
         "getEvents": get_events,
+        "getClass": get_class,
+        "getClassHashAt": get_class_hash_at,
+        "getClassAt": get_class_at,
+        "estimateFee": estimate_fee,
     }
 
     method_name = body["method"].lstrip("starknet_")
