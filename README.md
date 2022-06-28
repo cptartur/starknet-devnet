@@ -239,18 +239,20 @@ starknet-devnet --dump-on transaction --dump-path <PATH>
 curl -X POST http://<HOST>:<PORT>/dump -d '{ "path": <PATH> }' -H "Content-Type: application/json"
 ```
 
-- Loading state on request `/load`:
-
-```
-curl -X POST http://<HOST>:<PORT>/load -d '{ "path": <PATH> }' -H "Content-Type: application/json"
-```
-
 ### Loading
 
-To load a preserved Devnet instance, run:
+To load a preserved Devnet instance, the options are:
+
+- Loading on startup:
 
 ```
 starknet-devnet --load-path <PATH>
+```
+
+- Loading on request:
+
+```
+curl -X POST http://<HOST>:<PORT>/load -d '{ "path": <PATH> }' -H "Content-Type: application/json"
 ```
 
 ### Enabling dumping and loading with Docker
@@ -374,7 +376,27 @@ const account = await starknet.getAccountFromAddress(
 );
 ```
 
-The balance of an account can be checked using:
+### Fetch predeployed accounts
+
+```
+GET /predeployed_accounts
+```
+
+Response:
+
+```
+[
+  {
+    "initial_balance": 1e+21,
+    "address": "0x7c3e2...",
+    "private_key": "0x6160...",
+    "public_key": "0x6a5540..."
+  },
+  ...
+]
+```
+
+### Fetch account balance
 
 ```
 GET /account_balance?address=<HEX_ADDRESS>
@@ -420,7 +442,7 @@ poetry run starknet-devnet
 ### Development - Run in debug mode
 
 ```text
-./scripts/starknet-devnet-debug.sh 
+./scripts/starknet-devnet-debug.sh
 ```
 
 ### Development - Lint

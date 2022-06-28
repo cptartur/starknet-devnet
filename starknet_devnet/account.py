@@ -47,6 +47,15 @@ class Account:
             cls.CONTRACT_CLASS = ContractClass.load(load_nearby_contract(cls.CONTRACT_PATH))
         return cls.CONTRACT_CLASS
 
+    def to_json(self):
+        """Return json account"""
+        return {
+            "initial_balance": self.initial_balance,
+            "private_key": hex(self.private_key),
+            "public_key": hex(self.public_key),
+            "address": hex(self.address)
+        }
+
     async def deploy(self, starknet: Starknet) -> StarknetContract:
         """Deploy this account."""
         account_carried_state = starknet.state.state.contract_states[self.address]

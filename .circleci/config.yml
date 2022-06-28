@@ -16,7 +16,7 @@ jobs:
     docker:
       - image: cimg/python:3.7.12-node
     resource_class: medium
-    parallelism: 2
+    parallelism: 4
     steps:
       - checkout
       - run:
@@ -32,16 +32,20 @@ jobs:
           name: Compile test contracts
           command: ./scripts/compile_contracts.sh
       - run:
+          name: Check out previous test metadata
+          command: | 
+            jq . "${CIRCLE_INTERNAL_TASK_DATA}/circle-test-results/results.json"
+      - run:
           name: Run pytest tests
           parallel: true
           command: |
-            TESTFILES=$(
-                circleci tests glob test/test*.py |
-                circleci tests split --split-by=timings --timings-type=classname
-            )
             mkdir -p test-results
-            poetry run pytest -s --junitxml=test-results/junit.xml -vv $TESTFILES
+            SPLITED_FILES_CLASS=$(circleci tests glob test/test*.py | sed  "s/\.py//g; s/\//./g" | circleci tests split --split-by=timings --timings-type=classname)
+            TEST_FILES=$(sed "s/\./\//g; s/ /.py /g; s/$/.py/g;" \<<< $SPLITED_FILES_CLASS)
+            poetry run pytest -s -v --junitxml=test-results/junit.xml $TEST_FILES
       - store_test_results:
+          path: test-results
+      - store_artifacts:
           path: test-results
 
   test-py-max:
