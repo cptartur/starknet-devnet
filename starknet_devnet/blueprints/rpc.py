@@ -32,7 +32,7 @@ from ..util import StarknetDevnetException
 
 rpc = Blueprint("rpc", __name__, url_prefix="/rpc")
 
-PROTOCOL_VERSION = "0.8.0"
+PROTOCOL_VERSION = "0.15.0"
 
 @rpc.route("", methods=["POST"])
 async def base_route():

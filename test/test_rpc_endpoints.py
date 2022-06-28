@@ -954,7 +954,7 @@ def test_protocol_version(deploy_info):
     """
     Test protocol version
     """
-    protocol_version = "0.8.0"
+    protocol_version = "0.15.0"
 
     resp = rpc_call("starknet_protocolVersion", params={})
     version_hex: str = resp["result"]
