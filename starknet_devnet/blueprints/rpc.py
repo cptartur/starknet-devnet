@@ -377,11 +377,11 @@ def rpc_contract_class(contract_class: ContractClass) -> RpcContractClass:
         _program = contract_class.program.Schema().dump(contract_class.program)
         return compress_program(_program)
 
-    def entry_point_by_type() -> EntryPoints:
-        _entry_points = {
-            EntryPointType.CONSTRUCTOR: [],
-            EntryPointType.EXTERNAL: [],
-            EntryPointType.L1_HANDLER: [],
+    def entry_points_by_type() -> EntryPoints:
+        _entry_points: EntryPoints = {
+            "CONSTRUCTOR": [],
+            "EXTERNAL": [],
+            "L1_HANDLER": [],
         }
         for typ, entry_points in contract_class.entry_points_by_type.items():
             for entry_point in entry_points:
@@ -389,17 +389,12 @@ def rpc_contract_class(contract_class: ContractClass) -> RpcContractClass:
                     "selector": rpc_felt(entry_point.selector),
                     "offset": rpc_felt(entry_point.offset)
                 }
-                _entry_points[typ].append(_entry_point)
-        entry_points: EntryPoints = {
-            "CONSTRUCTOR": _entry_points[EntryPointType.CONSTRUCTOR],
-            "EXTERNAL": _entry_points[EntryPointType.EXTERNAL],
-            "L1_HANDLER": _entry_points[EntryPointType.L1_HANDLER],
-        }
-        return entry_points
+                _entry_points[typ.name].append(_entry_point)
+        return _entry_points
 
     _contract_class: RpcContractClass = {
         "program": program(),
-        "entry_points_by_type": entry_point_by_type()
+        "entry_points_by_type": entry_points_by_type()
     }
     return _contract_class
 
