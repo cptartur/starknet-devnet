@@ -410,7 +410,7 @@ class RpcBlock(TypedDict):
     sequencer_address: str
     new_root: str
     timestamp: int
-    transactions: List[str] | List[dict]
+    transactions: Union[List[str], List[dict]]
 
 
 async def rpc_block(block: StarknetBlock, requested_scope: Optional[str] = "TXN_HASH") -> RpcBlock:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import typing
-from typing import List
+from typing import List, Union
 
 import pytest
 from starkware.starknet.public.abi import get_storage_var_address, get_selector_from_name
@@ -26,7 +26,7 @@ INVOKE_CONTENT = load_file_content("invoke_rpc.json")
 DECLARE_CONTENT = load_file_content("declare.json")
 
 
-def rpc_call(method: str, params: dict | list) -> dict:
+def rpc_call(method: str, params: Union[dict, list]) -> dict:
     """
     Make a call to the RPC endpoint
     """
