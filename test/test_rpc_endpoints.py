@@ -501,7 +501,6 @@ def test_get_transaction_by_hash_declare(declare_info):
     assert transaction["contract_class"]["program"] != ""
 
 
-
 def test_get_transaction_by_hash_raises_on_incorrect_hash(deploy_info):
     """
     Get transaction by incorrect hash
