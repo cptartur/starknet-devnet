@@ -405,6 +405,8 @@ def test_add_deploy_transaction_on_incorrect_contract(deploy_content):
     Add deploy transaction on incorrect class
     """
     contract_definition = deploy_content["contract_definition"]
+    salt = deploy_content["contract_address_salt"]
+    calldata = [hex(data) for data in deploy_content["constructor_calldata"]]
 
     rpc_contract = RpcContractClass(
         program="",
@@ -414,8 +416,8 @@ def test_add_deploy_transaction_on_incorrect_contract(deploy_content):
     ex = rpc_call(
         "starknet_addDeployTransaction",
         params={
-            "contract_address_salt": int(deploy_content["contract_address_salt"], 16),
-            "constructor_calldata": deploy_content["constructor_calldata"],
+            "contract_address_salt": salt,
+            "constructor_calldata": calldata,
             "contract_definition": rpc_contract,
         }
     )
@@ -431,6 +433,8 @@ def test_add_deploy_transaction(deploy_content):
     Add deploy transaction
     """
     contract_definition = deploy_content["contract_definition"]
+    salt = deploy_content["contract_address_salt"]
+    calldata = [hex(data) for data in deploy_content["constructor_calldata"]]
 
     rpc_contract = RpcContractClass(
         program=contract_definition["program"],
@@ -440,8 +444,8 @@ def test_add_deploy_transaction(deploy_content):
     resp = rpc_call(
         "starknet_addDeployTransaction",
         params={
-            "contract_address_salt": int(deploy_content["contract_address_salt"], 16),
-            "constructor_calldata": deploy_content["constructor_calldata"],
+            "contract_address_salt": salt,
+            "constructor_calldata": calldata,
             "contract_definition": rpc_contract,
         }
     )
