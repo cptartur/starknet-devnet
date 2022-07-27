@@ -365,7 +365,7 @@ def test_add_declare_transaction_on_incorrect_contract(declare_content):
         "starknet_addDeclareTransaction",
         params={
             "contract_class": rpc_contract,
-            "version": constants.TRANSACTION_VERSION,
+            "version": hex(constants.TRANSACTION_VERSION),
         }
     )
 
