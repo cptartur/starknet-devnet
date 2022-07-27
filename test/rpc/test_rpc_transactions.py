@@ -329,16 +329,14 @@ def test_add_invoke_transaction(invoke_content):
     """
     Add invoke transaction
     """
-    function_invocation = RpcInvokeTransaction(
-        contract_address=invoke_content["contract_address"],
-        entry_point_selector=invoke_content["entry_point_selector"],
-        calldata=invoke_content["calldata"],
-    )
-
     resp = rpc_call(
         "starknet_addInvokeTransaction",
         params={
-            "function_invocation": function_invocation,
+            "function_invocation": {
+                "contract_address": invoke_content["contract_address"],
+                "entry_point_selector": invoke_content["entry_point_selector"],
+                "calldata": invoke_content["calldata"],
+            },
             "signature": invoke_content["signature"],
             "max_fee": hex(0),
             "version": hex(constants.TRANSACTION_VERSION),
@@ -346,7 +344,7 @@ def test_add_invoke_transaction(invoke_content):
     )
     receipt = resp["result"]
 
-    assert set(receipt.keys()) == set(["transaction_hash"])
+    assert set(receipt.keys()) == {"transaction_hash"}
     assert receipt["transaction_hash"][:3] == "0x0"
 
 
