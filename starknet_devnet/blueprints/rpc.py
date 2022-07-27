@@ -373,7 +373,7 @@ async def add_declare_transaction(contract_class: RpcContractClass, version: str
 
     declare_transaction = Declare(
         contract_class=contract_definition,
-        version=version,
+        version=int(version, 16),
         sender_address=DECLARE_SENDER_ADDRESS,
         max_fee=0,
         signature=[],
