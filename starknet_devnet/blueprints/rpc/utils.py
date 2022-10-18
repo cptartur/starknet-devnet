@@ -2,7 +2,8 @@
 RPC utilities
 """
 
-from starknet_devnet.blueprints.rpc.structures.types import BlockId, RpcError, Felt
+from starknet_devnet.blueprints.rpc.structures.types import BlockId, RpcError, Felt, BlockHashDict, BlockNumberDict, \
+    BlockTag
 from starknet_devnet.util import StarknetDevnetException
 from starknet_devnet.state import state
 
@@ -47,15 +48,28 @@ def get_block_by_block_id(block_id: BlockId) -> dict:
         raise RpcError(code=24, message="Invalid block id") from ex
 
 
-def assert_block_id_is_latest(block_id: BlockId) -> None:
+def assert_block_id_is_latest_or_pending(block_id: BlockId) -> None:
     """
-    Assert block_id is "latest" and throw RpcError otherwise
+    Assert block_id is "latest"/"pending" or a block hash or number of "latest"/"pending" block and throw RpcError otherwise
     """
-    if block_id != "latest":
-        raise RpcError(
-            code=-1,
-            message="Calls with block_id != 'latest' are not supported currently.",
-        )
+    last_block = state.starknet_wrapper.blocks.get_last_block()
+
+    if isinstance(block_id, BlockHashDict):
+        if block_id["block_hash"] == last_block.block_hash:
+            return
+
+    if isinstance(block_id, BlockNumberDict):
+        if block_id["block_number"] == last_block.block_number:
+            return
+
+    if isinstance(block_id, BlockTag):
+        if block_id in ("latest", "pending"):
+            return
+
+    raise RpcError(
+        code=-1,
+        message="Calls with block_id != 'latest' are not supported currently.",
+    )
 
 
 def rpc_felt(value: int) -> Felt:

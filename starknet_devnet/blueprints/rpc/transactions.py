@@ -22,7 +22,7 @@ from starkware.starkware_utils.error_handling import StarkException
 from starknet_devnet.blueprints.rpc.utils import (
     get_block_by_block_id,
     rpc_felt,
-    assert_block_id_is_latest,
+    assert_block_id_is_latest_or_pending,
 )
 from starknet_devnet.blueprints.rpc.structures.payloads import (
     rpc_transaction,
@@ -212,7 +212,7 @@ async def estimate_fee(request: RpcInvokeTransaction, block_id: BlockId) -> dict
     """
     Estimate the fee for a given StarkNet transaction
     """
-    assert_block_id_is_latest(block_id)
+    assert_block_id_is_latest_or_pending(block_id)
 
     if not state.starknet_wrapper.contracts.is_deployed(
         int(request["contract_address"], 16)
