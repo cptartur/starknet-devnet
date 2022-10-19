@@ -53,16 +53,18 @@ def assert_block_id_is_latest_or_pending(block_id: BlockId) -> None:
     Assert block_id is "latest"/"pending" or a block hash or number of "latest"/"pending" block and throw RpcError otherwise
     """
     last_block = state.starknet_wrapper.blocks.get_last_block()
+    print(type(block_id), block_id)
 
-    if isinstance(block_id, BlockHashDict):
-        if block_id["block_hash"] == last_block.block_hash:
-            return
+    if isinstance(block_id, dict):
+        if "block_hash" in block_id:
+            if int(block_id["block_hash"], 16) == last_block.block_hash:
+                return
 
-    if isinstance(block_id, BlockNumberDict):
-        if block_id["block_number"] == last_block.block_number:
-            return
+        if "block_number" in block_id:
+            if int(block_id["block_number"]) == last_block.block_number:
+                return
 
-    if isinstance(block_id, BlockTag):
+    if isinstance(block_id, str):
         if block_id in ("latest", "pending"):
             return
 
