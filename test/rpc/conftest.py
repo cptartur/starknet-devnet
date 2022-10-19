@@ -145,7 +145,7 @@ def fixture_block_id(gateway_block, request) -> dict:
     return _block_to_block_id(gateway_block, request.param)
 
 
-@pytest.fixture(name="latest_block_id")
+@pytest.fixture(name="latest_block_id", params=["hash", "number", "tag"])
 def fixture_latest_block_id(latest_block, request) -> dict:
     """
     Parametrized BlockId of latest gateway_block
