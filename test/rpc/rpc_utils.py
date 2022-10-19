@@ -81,6 +81,12 @@ def get_block_with_transaction(transaction_hash: str) -> dict:
     return block
 
 
+def get_latest_block() -> dict:
+    """
+    Retrive the latest block
+    """
+    return gateway_call("get_block", blockNumber="latest")
+
 def pad_zero(felt: str) -> Felt:
     """
     Convert felt with format `0xValue` to format `0x0Value`
