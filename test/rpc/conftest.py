@@ -23,6 +23,7 @@ from .rpc_utils import (
     get_block_with_transaction,
     pad_zero,
     add_transaction,
+    get_latest_block,
 )
 
 DEPLOY_CONTENT = load_file_content("deploy_rpc.json")
@@ -119,17 +120,34 @@ def fixture_gateway_block(deploy_info) -> dict:
     return get_block_with_transaction(deploy_info["transaction_hash"])
 
 
-@pytest.fixture(name="block_id")
+@pytest.fixture(name="latest_block")
+def fixture_latest_block() -> dict:
+    return get_latest_block()
+
+
+def _block_to_block_id(block: dict, key: str) -> dict:
+    block_id_map = {
+        "number": BlockNumberDict(block_number=block["block_number"]),
+        "hash": BlockHashDict(block_hash=pad_zero(block["block_hash"])),
+        "tag": "latest",
+    }
+    return block_id_map[key]
+
+
+@pytest.fixture(name="block_id", params=["hash", "number", "tag"])
 def fixture_block_id(gateway_block, request) -> dict:
     """
     BlockId of gateway_block depending on type in request
     """
-    block_id_map = {
-        "hash": BlockNumberDict(block_number=gateway_block["block_number"]),
-        "number": BlockHashDict(block_hash=pad_zero(gateway_block["block_hash"])),
-        "tag": "latest",
-    }
-    return block_id_map[request.param]
+    return _block_to_block_id(gateway_block, request.param)
+
+
+@pytest.fixture(name="latest_block_id")
+def fixture_latest_block_id(latest_block, request) -> dict:
+    """
+    Parametrized BlockId of latest gateway_block
+    """
+    return _block_to_block_id(latest_block, request.param)
 
 
 @pytest.fixture(name="rpc_invoke_tx_common")

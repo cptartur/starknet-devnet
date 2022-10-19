@@ -9,7 +9,7 @@ from .rpc_utils import rpc_call, pad_zero
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")
-def test_call(deploy_info):
+def test_call(deploy_info, latest_block_id):
     """
     Call contract
     """
@@ -23,9 +23,10 @@ def test_call(deploy_info):
                 "entry_point_selector": hex(get_selector_from_name("get_balance")),
                 "calldata": [],
             },
-            "block_id": "latest",
+            "block_id": latest_block_id,
         },
     )
+    assert "error" not in resp
     result = resp["result"]
 
     assert result == ["0x045"]
