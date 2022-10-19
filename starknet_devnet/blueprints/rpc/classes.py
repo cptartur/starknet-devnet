@@ -2,7 +2,10 @@
 RPC classes endpoints
 """
 
-from starknet_devnet.blueprints.rpc.utils import assert_block_id_is_latest_or_pending, rpc_felt
+from starknet_devnet.blueprints.rpc.utils import (
+    assert_block_id_is_latest_or_pending,
+    rpc_felt,
+)
 from starknet_devnet.blueprints.rpc.structures.payloads import rpc_contract_class
 from starknet_devnet.blueprints.rpc.structures.types import (
     BlockId,

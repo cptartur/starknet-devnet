@@ -2,8 +2,11 @@
 RPC utilities
 """
 
-from starknet_devnet.blueprints.rpc.structures.types import BlockId, RpcError, Felt, BlockHashDict, BlockNumberDict, \
-    BlockTag
+from starknet_devnet.blueprints.rpc.structures.types import (
+    BlockId,
+    RpcError,
+    Felt,
+)
 from starknet_devnet.util import StarknetDevnetException
 from starknet_devnet.state import state
 

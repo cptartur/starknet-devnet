@@ -6,7 +6,10 @@ from typing import Any, List
 
 from starkware.starkware_utils.error_handling import StarkException
 
-from starknet_devnet.blueprints.rpc.utils import rpc_felt, assert_block_id_is_latest_or_pending
+from starknet_devnet.blueprints.rpc.utils import (
+    rpc_felt,
+    assert_block_id_is_latest_or_pending,
+)
 from starknet_devnet.blueprints.rpc.structures.payloads import (
     make_invoke_function,
     FunctionCall,

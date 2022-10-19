@@ -122,6 +122,9 @@ def fixture_gateway_block(deploy_info) -> dict:
 
 @pytest.fixture(name="latest_block")
 def fixture_latest_block() -> dict:
+    """
+    Latest block
+    """
     return get_latest_block()
 
 
