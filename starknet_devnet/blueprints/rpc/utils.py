@@ -78,7 +78,7 @@ def assert_block_id_is_latest_or_pending(block_id: BlockId) -> None:
 
     raise RpcError(
         code=-1,
-        message="Calls must be made with block_id of the latest or pending block. Other block_id are not supported."
+        message="Calls must be made with block_id of the latest or pending block. Other block_id are not supported.",
     )
 
 

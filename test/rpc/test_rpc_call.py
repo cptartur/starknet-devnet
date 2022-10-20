@@ -69,7 +69,10 @@ def test_call_raises_on_both_hash_and_number():
         },
     )
 
-    assert ex["error"] == {"code": -1, "message": "Parameters block_hash and block_number are mutually exclusive."}
+    assert ex["error"] == {
+        "code": -1,
+        "message": "Parameters block_hash and block_number are mutually exclusive.",
+    }
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")
