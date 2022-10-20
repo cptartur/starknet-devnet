@@ -130,9 +130,10 @@ def fixture_latest_block() -> dict:
 
 def _block_to_block_id(block: dict, key: str) -> dict:
     block_id_map = {
-        "number": BlockNumberDict(block_number=block["block_number"]),
+        "number": BlockNumberDict(block_number=int(block["block_number"])),
         "hash": BlockHashDict(block_hash=pad_zero(block["block_hash"])),
         "tag": "latest",
+        "tag_pending": "pending",
     }
     return block_id_map[key]
 
@@ -145,7 +146,7 @@ def fixture_block_id(gateway_block, request) -> dict:
     return _block_to_block_id(gateway_block, request.param)
 
 
-@pytest.fixture(name="latest_block_id", params=["hash", "number", "tag"])
+@pytest.fixture(name="latest_block_id", params=["hash", "number", "tag", "tag_pending"])
 def fixture_latest_block_id(latest_block, request) -> dict:
     """
     Parametrized BlockId of latest gateway_block
