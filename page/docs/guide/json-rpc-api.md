@@ -31,3 +31,31 @@ Response:
 Methods currently not supported:
 
 - `starknet_protocolVersion` - will be removed in a future version of the specification
+
+Methods that require a `block_id` only support ids of the `latest` or `pending` block:
+
+```json
+// Use latest
+{
+  "block_id": "latest"
+}
+
+// or pending
+{
+  "block_id": "pending"
+}
+
+// or block number
+{
+  "block_id": {
+    "block_number": 1234  // Must be the number of the latest block
+  }
+}
+
+// or block hash
+{
+  "block_id": {
+    "block_hash": "0x1234" // Must be hash of the latest block
+  }
+}
+```
