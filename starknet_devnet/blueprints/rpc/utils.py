@@ -55,10 +55,15 @@ def assert_block_id_is_latest_or_pending(block_id: BlockId) -> None:
     """
     Assert block_id is "latest"/"pending" or a block hash or number of "latest"/"pending" block and throw RpcError otherwise
     """
-    last_block = state.starknet_wrapper.blocks.get_last_block()
-    print(type(block_id), block_id)
-
     if isinstance(block_id, dict):
+        last_block = state.starknet_wrapper.blocks.get_last_block()
+
+        if "block_hash" in block_id and "block_number" in block_id:
+            raise RpcError(
+                code=-1,
+                message="Parameters block_hash and block_number are mutually exclusive.",
+            )
+
         if "block_hash" in block_id:
             if int(block_id["block_hash"], 16) == last_block.block_hash:
                 return
