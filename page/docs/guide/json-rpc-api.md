@@ -34,7 +34,7 @@ Methods currently not supported:
 
 Methods that require a `block_id` only support ids of the `latest` or `pending` block:
 
-```json
+```js
 // Use latest
 {
   "block_id": "latest"
