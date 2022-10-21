@@ -55,7 +55,7 @@ def test_call_raises_on_incorrect_contract_address():
 @pytest.mark.usefixtures("run_devnet_in_background", "deploy_info")
 def test_call_raises_on_both_hash_and_number():
     """
-    Call contract with incorrect address
+    Call contract with both block hash and block number provided at the same time
     """
     ex = rpc_call(
         "starknet_call",
