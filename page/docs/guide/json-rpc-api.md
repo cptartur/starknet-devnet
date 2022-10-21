@@ -32,7 +32,8 @@ Methods currently not supported:
 
 - `starknet_protocolVersion` - will be removed in a future version of the specification
 
-Methods that require a `block_id` only support ids of the `latest` or `pending` block:
+Methods that require a `block_id` only support ids of the `latest` or `pending` block.
+Please note however, that the `pending` block will be the same block as the `latest`.
 
 ```js
 // Use latest
