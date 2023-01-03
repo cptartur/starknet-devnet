@@ -3,6 +3,7 @@ Tests RPC blocks
 """
 
 from test.rpc.rpc_utils import gateway_call, rpc_call
+from test.rpc.schema import assert_valid_rpc_schema
 from test.shared import (
     GENESIS_BLOCK_NUMBER,
     INCORRECT_GENESIS_BLOCK_HASH,
@@ -33,6 +34,7 @@ def test_get_block_with_tx_hashes(deploy_info, gateway_block, block_id):
     block = resp["result"]
     transaction_hash: str = rpc_felt(deploy_info["transaction_hash"])
 
+    assert_valid_rpc_schema(block, "starknet_getBlockWithTxHashes")
     assert block == {
         "block_hash": rpc_felt(block_hash),
         "parent_hash": rpc_felt(gateway_block["parent_block_hash"]),
@@ -75,6 +77,7 @@ def test_get_block_with_txs(gateway_block, block_id):
     resp = rpc_call("starknet_getBlockWithTxs", params={"block_id": block_id})
     block = resp["result"]
 
+    assert_valid_rpc_schema(block, "starknet_getBlockWithTxs")
     assert block == {
         "block_hash": rpc_felt(block_hash),
         "parent_hash": rpc_felt(gateway_block["parent_block_hash"]),
@@ -125,6 +128,7 @@ def test_get_block_transaction_count(block_id):
 
     resp = rpc_call("starknet_getBlockTransactionCount", params={"block_id": block_id})
     count = resp["result"]
+    assert_valid_rpc_schema(count, "starknet_getBlockTransactionCount")
 
     assert count == 1
 
@@ -158,4 +162,5 @@ def test_get_block_number():
     resp = rpc_call("starknet_blockNumber", params={})
     block_number: int = resp["result"]
 
+    assert_valid_rpc_schema(block_number, "starknet_blockNumber")
     assert latest_block_number == block_number
