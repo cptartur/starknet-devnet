@@ -1,10 +1,9 @@
 import copy
 import json
+from test.support.assertions import load_json_schema
 from typing import Any, Dict
 
 from jsonschema import validate
-
-from test.support.assertions import load_json_schema
 
 specs_json = load_json_schema("starknet_api_openrpc.json")
 schemas = specs_json["components"]["schemas"]
@@ -44,9 +43,4 @@ def _schema_for_method(name: str) -> Dict[str, Any]:
     # new_schemas = copy.deepcopy(schemas)
     # del new_schemas[name]
 
-    return {
-        **base_schema,
-        "components": {
-            "schemas": schemas
-        }
-    }
+    return {**base_schema, "components": {"schemas": schemas}}
