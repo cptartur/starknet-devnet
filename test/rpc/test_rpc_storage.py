@@ -3,13 +3,13 @@ Tests RPC storage
 """
 
 from test.rpc.rpc_utils import rpc_call
+from test.rpc.schema import assert_valid_rpc_schema
 
 import pytest
 from starkware.starknet.public.abi import get_storage_var_address
 
 from starknet_devnet.blueprints.rpc.structures.types import RpcErrorCode
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
-from test.rpc.schema import assert_valid_rpc_schema
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")
