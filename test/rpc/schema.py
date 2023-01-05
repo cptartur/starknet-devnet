@@ -8,7 +8,7 @@ from jsonschema import validate
 
 # Cache the function result so schemas are not reloaded from disk on every call
 @lru_cache
-def load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     specs_json = load_json_schema("starknet_api_openrpc.json")
     schemas = specs_json["components"]["schemas"]
     methods = {method["name"]: method for method in specs_json["methods"]}
@@ -47,7 +47,7 @@ def _schema_for_method(name: str) -> Dict[str, Any]:
     for the use in json schema validation.
     """
 
-    methods, schemas = load_schemas()
+    methods, schemas = _load_schemas()
     base_schema = methods[name]["result"]["schema"]
 
     if all(i not in base_schema for i in ("allOf", "anyOf", "oneOf")):
