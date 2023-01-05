@@ -26,11 +26,6 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     return methods, schemas
 
 
-def assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
-    schema = _schema_for_method(method_name)
-    validate(data, schema=schema)
-
-
 def _schema_for_method(name: str) -> Dict[str, Any]:
     """
     Return a dict structured like
@@ -56,3 +51,8 @@ def _schema_for_method(name: str) -> Dict[str, Any]:
         base_schema["additionalProperties"] = False
 
     return {**base_schema, "components": {"schemas": schemas}}
+
+
+def assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
+    schema = _schema_for_method(method_name)
+    validate(data, schema=schema)
