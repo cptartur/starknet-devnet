@@ -1,5 +1,8 @@
-from functools import lru_cache
+"""
+Utilities for validating RPC responses against RPC specification
+"""
 
+from functools import lru_cache
 from test.support.assertions import load_json_schema
 from typing import Any, Dict, Tuple
 
@@ -17,7 +20,7 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
         # Newer version of the RPC (above 0.45.0) has properly defined `required` fields.
         # Once we start targeting them, this can be removed.
         if "required" not in schema and "properties" in schema:
-            schema["required"] = [prop for prop in schema["properties"].keys()]
+            schema["required"] = list(schema["properties"].keys())
 
         # Ensures validation fails in case of extra fields not matched by any of `allOf` / `anyOf` branches.
         if "allOf" in schema or "anyOf" in schema:
@@ -54,5 +57,8 @@ def _schema_for_method(name: str) -> Dict[str, Any]:
 
 
 def assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
+    """
+    Check if rpc response is valid against the schema for given method name
+    """
     schema = _schema_for_method(method_name)
     validate(data, schema=schema)
