@@ -14,7 +14,7 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     methods = {method["name"]: method for method in specs_json["methods"]}
 
     for schema in schemas.values():
-        # Newer version of the rpc (above 0.45.0) have required properly defined.
+        # Newer version of the RPC (above 0.45.0) has properly defined `required` fields.
         # Once we start targeting them, this can be removed.
         if "required" not in schema and "properties" in schema:
             schema["required"] = [prop for prop in schema["properties"].keys()]
