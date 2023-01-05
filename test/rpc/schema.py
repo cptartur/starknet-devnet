@@ -1,5 +1,3 @@
-import copy
-import json
 from test.support.assertions import load_json_schema
 from typing import Any, Dict
 
