@@ -4,14 +4,11 @@ Tests RPC miscellaneous
 
 from __future__ import annotations
 
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from test.account import declare, invoke
 from test.rpc.rpc_utils import deploy_and_invoke_storage_contract, rpc_call
-from test.rpc.test_data.get_events import GET_EVENTS_TEST_DATA
 from test.shared import (
     CONTRACT_PATH,
     DEPLOYER_CONTRACT_PATH,
-    EVENTS_CONTRACT_PATH,
     EXPECTED_CLASS_HASH,
     EXPECTED_FEE_TOKEN_ADDRESS,
     PREDEPLOYED_ACCOUNT_ADDRESS,
@@ -24,6 +21,7 @@ from test.util import assert_hex_equal, assert_transaction, deploy
 import pytest
 from starkware.starknet.public.abi import get_storage_var_address
 
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
 from starknet_devnet.general_config import DEFAULT_GENERAL_CONFIG
 

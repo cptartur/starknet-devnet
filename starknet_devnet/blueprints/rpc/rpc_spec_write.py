@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines, missing-module-docstring
 RPC_SPECIFICATION_WRITE = r"""
 {
     "openrpc": "1.0.0-rc1",

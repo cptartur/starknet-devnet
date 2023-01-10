@@ -6,9 +6,9 @@ from test.rpc.rpc_utils import rpc_call
 import pytest
 from starkware.starknet.public.abi import get_selector_from_name
 
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.structures.types import RpcErrorCode
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")

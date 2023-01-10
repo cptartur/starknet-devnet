@@ -1,12 +1,12 @@
 """
 Tests RPC contract class
 """
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from test.rpc.rpc_utils import rpc_call
 
 import pytest
 from starkware.starknet.services.api.gateway.transaction_utils import decompress_program
 
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.utils import BlockId, rpc_felt
 
 EXPECTED_ENTRY_POINTS = {

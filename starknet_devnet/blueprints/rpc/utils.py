@@ -87,6 +87,10 @@ def rpc_felt(value: Union[int, str]) -> Felt:
 
 
 def gateway_felt(value: Union[int, str]) -> str:
+    """
+    Convert value to 0x prefixed felt
+    The value can be base 10 integer, base 10 string or base 16 string
+    """
     if isinstance(value, str):
         value = int(value) if value.isnumeric() else int(value, 16)
 

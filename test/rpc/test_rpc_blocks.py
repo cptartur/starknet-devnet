@@ -1,7 +1,6 @@
 """
 Tests RPC blocks
 """
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from test.rpc.rpc_utils import gateway_call, rpc_call
 from test.shared import (
     GENESIS_BLOCK_NUMBER,
@@ -11,6 +10,7 @@ from test.shared import (
 
 import pytest
 
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.structures.types import (
     BlockHashDict,
     BlockNumberDict,

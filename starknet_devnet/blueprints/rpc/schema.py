@@ -2,18 +2,15 @@
 Utilities for validating RPC responses against RPC specification
 """
 import json
-from functools import lru_cache, wraps
 from dataclasses import dataclass
+from functools import lru_cache, wraps
+from typing import Any, Dict, List, Tuple
 
+from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
 from starknet_devnet.blueprints.rpc.rpc_spec import RPC_SPECIFICATION
-from typing import Any, Dict, Tuple, List
-
-from jsonschema import validate
-
 from starknet_devnet.blueprints.rpc.rpc_spec_write import RPC_SPECIFICATION_WRITE
-from starknet_devnet.blueprints.rpc.structures.types import RpcError
 
 
 # Cache the function result so schemas are not reloaded from disk on every call
@@ -24,7 +21,10 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     methods = {method["name"]: method for method in specs_json["methods"]}
 
     write_specs_json = json.loads(RPC_SPECIFICATION_WRITE)
-    methods = {**methods, **{method["name"]: method for method in write_specs_json["methods"]}}
+    methods = {
+        **methods,
+        **{method["name"]: method for method in write_specs_json["methods"]},
+    }
 
     for schema in schemas.values():
         # Newer version of the RPC (above 0.45.0) has properly defined `required` fields.
@@ -68,6 +68,10 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
 
 @dataclass
 class RequestSchema:
+    """
+    Return type of _request_schemas_for_method function
+    """
+
     params: List[str]
     schemas: Dict[str, Any]
 
@@ -102,6 +106,11 @@ def assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
 
 
 def assert_valid_rpc_request(*args, method_name: str, **kwargs):
+    """
+    Validate if RPC request (parameters) is correct.
+
+    Raise ValidationError if not.
+    """
     schemas = _request_schemas_for_method(_construct_method_name(method_name))
 
     for arg, name in zip(args, schemas.params):
@@ -112,31 +121,48 @@ def assert_valid_rpc_request(*args, method_name: str, **kwargs):
 
 
 class ParamsValidationErrorWrapper(Exception):
+    """
+    Wrapper for ValidationError raised during request validation
+    """
+
     def __init__(self, err: ValidationError):
+        super().__init__()
         self.validation_error = err
 
 
 class ResponseValidationErrorWrapper(Exception):
+    """
+    Wrapper for ValidationError raised during response validation
+    """
+
     def __init__(self, err: ValidationError):
+        super().__init__()
         self.validation_error = err
 
 
 def require_valid_response(method_name: str):
+    """
+    Decorator ensuring that call to rpc method and its response are valid
+    in respect to RPC specification schemas.
+    """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             try:
                 assert_valid_rpc_request(*args, **kwargs, method_name=method_name)
             except ValidationError as err:
-                raise ParamsValidationErrorWrapper(err)
+                raise ParamsValidationErrorWrapper(err) from err
 
             result = await func(*args, **kwargs)
 
             try:
                 assert_valid_rpc_schema(result, method_name)
             except ValidationError as err:
-                raise ResponseValidationErrorWrapper(err)
+                raise ResponseValidationErrorWrapper(err) from err
 
             return result
+
         return wrapper
+
     return decorator

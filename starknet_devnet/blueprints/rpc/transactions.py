@@ -35,8 +35,9 @@ from starknet_devnet.blueprints.rpc.structures.responses import (
 from starknet_devnet.blueprints.rpc.structures.types import BlockId, RpcError, TxnHash
 from starknet_devnet.blueprints.rpc.utils import (
     assert_block_id_is_latest_or_pending,
+    gateway_felt,
     get_block_by_block_id,
-    rpc_felt, gateway_felt,
+    rpc_felt,
 )
 from starknet_devnet.state import state
 from starknet_devnet.util import StarknetDevnetException

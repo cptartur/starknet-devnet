@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines, missing-module-docstring
 # NOTE: This is modified version of 0.2.1 spec
 # Some usages of "oneOf" has been replaced by "anyOf"
 # and one method has been fixed

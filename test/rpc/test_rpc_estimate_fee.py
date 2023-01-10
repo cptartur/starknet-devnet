@@ -33,7 +33,6 @@ from starknet_devnet.blueprints.rpc.structures.payloads import (
     RpcBroadcastedInvokeTxnV0,
     RpcBroadcastedInvokeTxnV1,
     RpcContractClass,
-    RpcInvokeTransactionV0,
 )
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
 from starknet_devnet.constants import DEFAULT_GAS_PRICE, LEGACY_RPC_TX_VERSION
@@ -81,7 +80,7 @@ def test_estimate_happy_path_v0():
         "version": hex(LEGACY_RPC_TX_VERSION),
         "signature": [],
         "type": "INVOKE",
-        "nonce": "0x00"  # According to RPC specs it seems that nonce should be passed even with tx v0
+        "nonce": "0x00",  # According to RPC specs it seems that nonce should be passed even with tx v0
     }
     response = rpc_call_background_devnet(
         "starknet_estimateFee", {"request": txn, "block_id": "latest"}
@@ -244,7 +243,7 @@ def test_estimate_fee_with_invalid_contract_address():
         "version": hex(LEGACY_RPC_TX_VERSION),
         "signature": [],
         "type": "INVOKE",
-        "nonce": "0x00"
+        "nonce": "0x00",
     }
     ex = rpc_call_background_devnet(
         "starknet_estimateFee", {"request": txn, "block_id": "latest"}
@@ -266,7 +265,7 @@ def test_estimate_fee_with_invalid_message_selector():
         "version": hex(LEGACY_RPC_TX_VERSION),
         "signature": [],
         "type": "INVOKE",
-        "nonce": "0x00"
+        "nonce": "0x00",
     }
     ex = rpc_call_background_devnet(
         "starknet_estimateFee", {"request": txn, "block_id": "latest"}
