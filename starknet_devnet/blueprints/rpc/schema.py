@@ -29,6 +29,9 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     for schema in schemas.values():
         # Newer version of the RPC (above 0.45.0) has properly defined `required` fields.
         # Once we start targeting them, this can be removed.
+        #
+        # NOTE: This does not add `required` to all schemas that should have it, i.e. it fails to add `required`
+        # to nested objects. This causes validation to be incomplete in these cases.
         if "required" not in schema and "properties" in schema:
             schema["required"] = list(schema["properties"].keys())
 
