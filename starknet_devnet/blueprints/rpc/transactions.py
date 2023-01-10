@@ -10,7 +10,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
 from starkware.starknet.services.api.gateway.transaction import AccountTransaction
 from starkware.starkware_utils.error_handling import StarkException
 
-from starknet_devnet.blueprints.rpc.schema import require_valid_response
+from starknet_devnet.blueprints.rpc.schema import require_valid_request_and_response
 from starknet_devnet.blueprints.rpc.structures.payloads import (
     RpcBroadcastedDeclareTxn,
     RpcBroadcastedDeployAccountTxn,
@@ -43,7 +43,7 @@ from starknet_devnet.state import state
 from starknet_devnet.util import StarknetDevnetException
 
 
-@require_valid_response("getTransactionByHash")
+@require_valid_request_and_response("getTransactionByHash")
 async def get_transaction_by_hash(transaction_hash: TxnHash) -> dict:
     """
     Get the details and status of a submitted transaction
@@ -61,7 +61,7 @@ async def get_transaction_by_hash(transaction_hash: TxnHash) -> dict:
     return rpc_transaction(result.transaction)
 
 
-@require_valid_response("getTransactionByBlockIdAndIndex")
+@require_valid_request_and_response("getTransactionByBlockIdAndIndex")
 async def get_transaction_by_block_id_and_index(block_id: BlockId, index: int) -> dict:
     """
     Get the details of a transaction by a given block id and index
@@ -76,7 +76,7 @@ async def get_transaction_by_block_id_and_index(block_id: BlockId, index: int) -
     return await get_transaction_by_hash(transaction_hash=rpc_felt(transaction_hash))
 
 
-@require_valid_response("getTransactionReceipt")
+@require_valid_request_and_response("getTransactionReceipt")
 async def get_transaction_receipt(transaction_hash: TxnHash) -> dict:
     """
     Get the transaction receipt by the transaction hash
@@ -94,7 +94,7 @@ async def get_transaction_receipt(transaction_hash: TxnHash) -> dict:
     return await rpc_transaction_receipt(result)
 
 
-@require_valid_response("pendingTransactions")
+@require_valid_request_and_response("pendingTransactions")
 async def pending_transactions() -> List[RpcTransaction]:
     """
     Returns the transactions in the transaction pool, recognized by this sequencer
@@ -102,7 +102,7 @@ async def pending_transactions() -> List[RpcTransaction]:
     raise NotImplementedError()
 
 
-@require_valid_response("addInvokeTransaction")
+@require_valid_request_and_response("addInvokeTransaction")
 async def add_invoke_transaction(invoke_transaction: RpcBroadcastedInvokeTxn) -> dict:
     """
     Submit a new transaction to be added to the chain
@@ -117,7 +117,7 @@ async def add_invoke_transaction(invoke_transaction: RpcBroadcastedInvokeTxn) ->
     )
 
 
-@require_valid_response("addDeclareTransaction")
+@require_valid_request_and_response("addDeclareTransaction")
 async def add_declare_transaction(
     declare_transaction: RpcBroadcastedDeclareTxn,
 ) -> dict:
@@ -135,7 +135,7 @@ async def add_declare_transaction(
     )
 
 
-@require_valid_response("addDeployTransaction")
+@require_valid_request_and_response("addDeployTransaction")
 async def add_deploy_transaction(deploy_transaction: RpcBroadcastedDeployTxn) -> dict:
     """
     Submit a new deploy contract transaction
@@ -151,7 +151,7 @@ async def add_deploy_transaction(deploy_transaction: RpcBroadcastedDeployTxn) ->
     )
 
 
-@require_valid_response("addDeployAccountTransaction")
+@require_valid_request_and_response("addDeployAccountTransaction")
 async def add_deploy_account_transaction(
     deploy_account_transaction: RpcBroadcastedDeployAccountTxn,
 ) -> dict:
@@ -195,7 +195,7 @@ def make_transaction(txn: RpcBroadcastedTxn) -> AccountTransaction:
     raise NotImplementedError(f"Unexpected type {txn_type}.")
 
 
-@require_valid_response("estimateFee")
+@require_valid_request_and_response("estimateFee")
 async def estimate_fee(request: RpcBroadcastedTxn, block_id: BlockId) -> dict:
     """
     Estimate the fee for a given StarkNet transaction
