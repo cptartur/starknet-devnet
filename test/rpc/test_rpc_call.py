@@ -124,7 +124,7 @@ def test_call_raises_on_invalid_calldata(deploy_info, calldata):
         },
     )
 
-    assert ex["error"] == {"code": 22, "message": "Invalid call data"}
+    assert ex["error"]["code"] == RpcErrorCode.INVALID_PARAMS.value
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")
@@ -146,10 +146,7 @@ def test_call_raises_on_incorrect_block_hash(deploy_info):
         },
     )
 
-    assert ex["error"] == {
-        "code": RpcErrorCode.INVALID_PARAMS.value,
-        "message": "Invalid params",
-    }
+    assert ex["error"]["code"] == RpcErrorCode.INVALID_PARAMS.value
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")

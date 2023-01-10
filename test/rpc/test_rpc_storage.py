@@ -90,7 +90,7 @@ def test_get_storage_at_raises_on_incorrect_block_id(deploy_info):
         params={
             "contract_address": rpc_felt(contract_address),
             "key": rpc_felt(key),
-            "block_id": "0x0",
+            "block_id": {"block_number": 99999},
         },
     )
 

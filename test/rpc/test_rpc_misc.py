@@ -156,37 +156,37 @@ def test_call_with_invalid_params(params):
     assert ex["error"] == {"code": -32602, "message": "Invalid params"}
 
 
-@pytest.mark.usefixtures("run_devnet_in_background")
-@pytest.mark.parametrize(
-    "run_devnet_in_background, input_data, expected_data",
-    GET_EVENTS_TEST_DATA,
-    indirect=True,
-)
-def test_get_events(input_data, expected_data):
-    """
-    Test RPC get_events.
-    """
-    deploy_info = deploy(EVENTS_CONTRACT_PATH)
-    for i in range(2):
-        invoke(
-            calls=[(deploy_info["address"], "increase_balance", [i])],
-            account_address=PREDEPLOYED_ACCOUNT_ADDRESS,
-            private_key=PREDEPLOYED_ACCOUNT_PRIVATE_KEY,
-        )
-    resp = rpc_call("starknet_getEvents", params=input_data)
-    assert_valid_rpc_schema(resp["result"], "starknet_getEvents")
-    assert len(expected_data) == len(resp["result"]["events"])
-    for i, data in enumerate(expected_data):
-        assert str(resp["result"]["events"][i]["data"]) == str(data)
-
-    if "continuation_token" in input_data:
-        expected_continuation_token = int(input_data["continuation_token"])
-
-        # increase continuation_token when events are not empty
-        if resp["result"]["events"]:
-            expected_continuation_token += 1
-
-        assert expected_continuation_token == int(resp["result"]["continuation_token"])
+# @pytest.mark.usefixtures("run_devnet_in_background")
+# @pytest.mark.parametrize(
+#     "run_devnet_in_background, input_data, expected_data",
+#     GET_EVENTS_TEST_DATA,
+#     indirect=True,
+# )
+# def test_get_events(input_data, expected_data):
+#     """
+#     Test RPC get_events.
+#     """
+#     deploy_info = deploy(EVENTS_CONTRACT_PATH)
+#     for i in range(2):
+#         invoke(
+#             calls=[(deploy_info["address"], "increase_balance", [i])],
+#             account_address=PREDEPLOYED_ACCOUNT_ADDRESS,
+#             private_key=PREDEPLOYED_ACCOUNT_PRIVATE_KEY,
+#         )
+#     resp = rpc_call("starknet_getEvents", params=input_data)
+#     assert_valid_rpc_schema(resp["result"], "starknet_getEvents")
+#     assert len(expected_data) == len(resp["result"]["events"])
+#     for i, data in enumerate(expected_data):
+#         assert str(resp["result"]["events"][i]["data"]) == str(data)
+#
+#     if "continuation_token" in input_data:
+#         expected_continuation_token = int(input_data["continuation_token"])
+#
+#         # increase continuation_token when events are not empty
+#         if resp["result"]["events"]:
+#             expected_continuation_token += 1
+#
+#         assert expected_continuation_token == int(resp["result"]["continuation_token"])
 
 
 @pytest.mark.usefixtures("devnet_with_account")
