@@ -86,6 +86,13 @@ def rpc_felt(value: Union[int, str]) -> Felt:
     return "0x0" + hex(value).lstrip("0x")
 
 
+def gateway_felt(value: Union[int, str]) -> str:
+    if isinstance(value, str):
+        value = int(value) if value.isnumeric() else int(value, 16)
+
+    return hex(value)
+
+
 def rpc_root(root: str) -> Felt:
     """
     Convert 0 prefixed root to 0x prefixed root
