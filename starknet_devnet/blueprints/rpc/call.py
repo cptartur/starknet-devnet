@@ -6,6 +6,7 @@ from typing import Any, List
 
 from starkware.starkware_utils.error_handling import StarkException
 
+from starknet_devnet.blueprints.rpc.schema import require_valid_response
 from starknet_devnet.blueprints.rpc.structures.payloads import (
     RpcFunctionCall,
     make_call_function,
@@ -32,6 +33,7 @@ def _validate_calldata(calldata: List[Any]):
             raise RpcError(code=22, message="Invalid call data") from error
 
 
+@require_valid_response("call")
 async def call(request: RpcFunctionCall, block_id: BlockId) -> List[Felt]:
     """
     Call a starknet function without creating a StarkNet transaction
