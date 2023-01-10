@@ -36,7 +36,7 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
             schema["required"] = list(schema["properties"].keys())
 
         # Ensures validation fails in case of extra fields not matched by any of `allOf` / `anyOf` branches.
-        if "allOf" in schema or "anyOf" in schema:
+        if any(i for i in ("allOf", "anyOf", "oneOf")):
             schema["unevaluatedProperties"] = False
 
     return methods, schemas
