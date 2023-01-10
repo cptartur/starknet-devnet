@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from test.account import _get_signature, get_nonce
 from test.rpc.rpc_utils import rpc_call_background_devnet
-from test.rpc.schema import assert_valid_rpc_schema
 from test.rpc.test_rpc_transactions import pad_zero_entry_points
 from test.shared import (
     PREDEPLOY_ACCOUNT_CLI_ARGS,
@@ -76,7 +75,7 @@ def test_estimate_happy_path_v0():
 
     txn: RpcBroadcastedInvokeTxnV0 = {
         "contract_address": contract_address,
-        "entry_point_selector": hex(get_selector_from_name("sum_point_array")),
+        "entry_point_selector": rpc_felt(get_selector_from_name("sum_point_array")),
         "calldata": ["0x02", "0x01", "0x02", "0x03", "0x04"],
         "max_fee": rpc_felt(0),
         "version": hex(LEGACY_RPC_TX_VERSION),
@@ -238,7 +237,7 @@ def test_estimate_fee_with_invalid_contract_address():
     """Call estimate fee with invalid data on body"""
     txn: RpcInvokeTransactionV0 = {
         "contract_address": "0x01",
-        "entry_point_selector": hex(get_selector_from_name("sum_point_array")),
+        "entry_point_selector": rpc_felt(get_selector_from_name("sum_point_array")),
         "calldata": ["0x02", "0x01", "0x02", "0x03", "0x04"],
         "max_fee": rpc_felt(0),
         "version": hex(LEGACY_RPC_TX_VERSION),

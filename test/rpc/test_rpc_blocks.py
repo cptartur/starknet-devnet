@@ -1,9 +1,8 @@
 """
 Tests RPC blocks
 """
-
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from test.rpc.rpc_utils import gateway_call, rpc_call
-from test.rpc.schema import assert_valid_rpc_schema
 from test.shared import (
     GENESIS_BLOCK_NUMBER,
     INCORRECT_GENESIS_BLOCK_HASH,
@@ -77,7 +76,7 @@ def test_get_block_with_txs(gateway_block, block_id):
     resp = rpc_call("starknet_getBlockWithTxs", params={"block_id": block_id})
     block = resp["result"]
 
-    assert_valid_rpc_schema(block, "starknet_getBlockWithTxs")
+    assert_valid_rpc_schema(block, "getBlockWithTxs")
     assert block == {
         "block_hash": rpc_felt(block_hash),
         "parent_hash": rpc_felt(gateway_block["parent_block_hash"]),

@@ -1,9 +1,8 @@
 """
 Tests RPC storage
 """
-
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from test.rpc.rpc_utils import rpc_call
-from test.rpc.schema import assert_valid_rpc_schema
 
 import pytest
 from starkware.starknet.public.abi import get_storage_var_address
@@ -25,7 +24,7 @@ def test_get_storage_at(deploy_info):
         "starknet_getStorageAt",
         params={
             "contract_address": rpc_felt(contract_address),
-            "key": key,
+            "key": rpc_felt(key),
             "block_id": block_id,
         },
     )
@@ -47,7 +46,7 @@ def test_get_storage_at_raises_on_incorrect_contract():
         "starknet_getStorageAt",
         params={
             "contract_address": "0x00",
-            "key": key,
+            "key": rpc_felt(key),
             "block_id": block_id,
         },
     )
@@ -90,7 +89,7 @@ def test_get_storage_at_raises_on_incorrect_block_id(deploy_info):
         "starknet_getStorageAt",
         params={
             "contract_address": rpc_felt(contract_address),
-            "key": key,
+            "key": rpc_felt(key),
             "block_id": "0x0",
         },
     )

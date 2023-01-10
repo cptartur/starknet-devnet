@@ -4,9 +4,9 @@ Tests RPC miscellaneous
 
 from __future__ import annotations
 
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from test.account import declare, invoke
 from test.rpc.rpc_utils import deploy_and_invoke_storage_contract, rpc_call
-from test.rpc.schema import assert_valid_rpc_schema
 from test.rpc.test_data.get_events import GET_EVENTS_TEST_DATA
 from test.shared import (
     CONTRACT_PATH,

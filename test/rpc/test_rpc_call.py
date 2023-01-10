@@ -1,15 +1,14 @@
 """
 Tests RPC rpc_call
 """
-
 from test.rpc.rpc_utils import rpc_call
-from test.rpc.schema import assert_valid_rpc_schema
 
 import pytest
 from starkware.starknet.public.abi import get_selector_from_name
 
 from starknet_devnet.blueprints.rpc.structures.types import RpcErrorCode
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")
@@ -24,7 +23,7 @@ def test_call(deploy_info, latest_block_id):
         params={
             "request": {
                 "contract_address": rpc_felt(contract_address),
-                "entry_point_selector": hex(get_selector_from_name("get_balance")),
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
                 "calldata": [],
             },
             "block_id": latest_block_id,
@@ -47,7 +46,7 @@ def test_call_raises_on_incorrect_contract_address():
         params={
             "request": {
                 "contract_address": "0x07b529269b82f3f3ebbb2c463a9e1edaa2c6eea8fa308ff70b30398766a2e20c",
-                "entry_point_selector": hex(get_selector_from_name("get_balance")),
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
                 "calldata": [],
             },
             "block_id": "latest",
@@ -67,7 +66,7 @@ def test_call_raises_on_both_hash_and_number():
         params={
             "request": {
                 "contract_address": "0x07b529269b82f3f3ebbb2c463a9e1edaa2c6eea8fa308ff70b30398766a2e20c",
-                "entry_point_selector": hex(get_selector_from_name("get_balance")),
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
                 "calldata": [],
             },
             "block_id": {"block_hash": "0x1234", "block_number": 1234},
@@ -92,7 +91,7 @@ def test_call_raises_on_incorrect_selector(deploy_info):
         params={
             "request": {
                 "contract_address": rpc_felt(contract_address),
-                "entry_point_selector": hex(get_selector_from_name("xxxxxxx")),
+                "entry_point_selector": rpc_felt(get_selector_from_name("xxxxxxx")),
                 "calldata": [],
             },
             "block_id": "latest",
@@ -118,7 +117,7 @@ def test_call_raises_on_invalid_calldata(deploy_info, calldata):
         params={
             "request": {
                 "contract_address": rpc_felt(contract_address),
-                "entry_point_selector": hex(get_selector_from_name("get_balance")),
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
                 "calldata": calldata,
             },
             "block_id": "latest",
@@ -140,7 +139,7 @@ def test_call_raises_on_incorrect_block_hash(deploy_info):
         params={
             "request": {
                 "contract_address": rpc_felt(contract_address),
-                "entry_point_selector": hex(get_selector_from_name("get_balance")),
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
                 "calldata": [],
             },
             "block_id": "0x0",

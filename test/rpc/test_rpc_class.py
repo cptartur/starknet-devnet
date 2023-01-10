@@ -1,8 +1,8 @@
 """
 Tests RPC contract class
 """
+from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from test.rpc.rpc_utils import rpc_call
-from test.rpc.schema import assert_valid_rpc_schema
 
 import pytest
 from starkware.starknet.services.api.gateway.transaction_utils import decompress_program
