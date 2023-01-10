@@ -93,7 +93,7 @@ async def base_route():
     except ParamsValidationErrorWrapper as error:
         return rpc_error(message_id=message_id, code=RpcErrorCode.INVALID_PARAMS.value, message=str(error.validation_error))
     except ResponseValidationErrorWrapper as error:
-        return rpc_error(message_id=message_id, code=RpcErrorCode._ERROR.value, message=str(error.validation_error))
+        return rpc_error(message_id=message_id, code=RpcErrorCode.INTERNAL_ERROR.value, message=str(error.validation_error))
 
     return rpc_response(message_id=message_id, content=result)
 

@@ -19,7 +19,7 @@ from starknet_devnet.blueprints.rpc.structures.types import (
 )
 from starknet_devnet.blueprints.rpc.utils import (
     assert_block_id_is_latest_or_pending,
-    rpc_felt,
+    rpc_felt, gateway_felt,
 )
 from starknet_devnet.state import state
 from starknet_devnet.util import StarknetDevnetException
@@ -58,7 +58,7 @@ async def call(request: RpcFunctionCall, block_id: BlockId) -> List[Felt]:
     except StarkException as ex:
         if ex.code.name == "TRANSACTION_FAILED" and ex.code.value == 39:
             raise RpcError(code=22, message="Invalid call data") from ex
-        if f"Entry point {request['entry_point_selector']} not found" in ex.message:
+        if f"Entry point {gateway_felt(request['entry_point_selector'])} not found" in ex.message:
             raise RpcError(code=21, message="Invalid message selector") from ex
         if "While handling calldata" in ex.message:
             raise RpcError(code=22, message="Invalid call data") from ex

@@ -36,7 +36,7 @@ from starknet_devnet.blueprints.rpc.structures.types import BlockId, RpcError, T
 from starknet_devnet.blueprints.rpc.utils import (
     assert_block_id_is_latest_or_pending,
     get_block_by_block_id,
-    rpc_felt,
+    rpc_felt, gateway_felt,
 )
 from starknet_devnet.state import state
 from starknet_devnet.util import StarknetDevnetException
@@ -207,7 +207,7 @@ async def estimate_fee(request: RpcBroadcastedTxn, block_id: BlockId) -> dict:
         )
     except StarkException as ex:
         if "entry_point_selector" in request and (
-            f"Entry point {hex(int(request['entry_point_selector'], 16))} not found"
+            f"Entry point {gateway_felt(request['entry_point_selector'])} not found"
             in ex.message
         ):
             raise RpcError(code=21, message="Invalid message selector") from ex
