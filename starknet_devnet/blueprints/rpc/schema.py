@@ -2,9 +2,10 @@
 Utilities for validating RPC responses against RPC specification
 """
 import json
-from dataclasses import dataclass
+from collections import OrderedDict
 from functools import lru_cache, wraps
 from typing import Any, Dict, List, Tuple
+from typing import OrderedDict as OrderedDictType
 
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
@@ -77,7 +78,7 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
     return {**base_schema, "components": {"schemas": schemas}}
 
 
-def _request_schemas_for_method(name: str) -> Dict[str, Any]:
+def _request_schemas_for_method(name: str) -> OrderedDictType[str, Any]:
     """
     Return a dict with correct structure for jsonschema validation.
 
@@ -99,7 +100,7 @@ def _request_schemas_for_method(name: str) -> Dict[str, Any]:
     params_json: List[Dict[str, Any]] = methods[name]["params"]
 
     params = []
-    request_schemas = {}
+    request_schemas = OrderedDict()
     for param in params_json:
         name = param["name"]
         params.append(name)
