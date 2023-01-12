@@ -152,16 +152,18 @@ def assert_valid_rpc_request(*args, method_name: str, **kwargs):
         if len(kwargs) > len(schemas):
             raise ValidationError("Too many arguments provided.")
 
-        for name in schemas.keys():
+        for name, schema in schemas.items():
             if name not in kwargs:
                 raise ValidationError(f"Missing kwarg for {name}.")
 
             value = kwargs[name]
-            validate(value, schemas[name])
+            validate(value, schema)
         return
 
     if length := len(schemas) != 0:
-        raise ValidationError(f"0 arguments provided to function expecting {length} arguments.")
+        raise ValidationError(
+            f"0 arguments provided to function expecting {length} arguments."
+        )
 
 
 class ParamsValidationErrorWrapper(Exception):
