@@ -143,7 +143,7 @@ class ResponseValidationErrorWrapper(Exception):
         self.validation_error = err
 
 
-def require_valid_request_and_response(method_name: str):
+def validate_schema(method_name: str):
     """
     Decorator ensuring that call to rpc method and its response are valid
     in respect to RPC specification schemas.
