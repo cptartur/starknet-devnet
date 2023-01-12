@@ -61,7 +61,7 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
     methods, schemas = _load_schemas()
     base_schema = methods[name]["result"]["schema"]
 
-    if all(i not in base_schema for i in ("allOf", "anyOf", "oneOf")):
+    if not any(i in base_schema for i in ("allOf", "anyOf", "oneOf")):
         # This has to be done here, because setting additionalProperties = False in
         # load_schemas doesn't work with `allOf` etc. properly.
         base_schema["additionalProperties"] = False
