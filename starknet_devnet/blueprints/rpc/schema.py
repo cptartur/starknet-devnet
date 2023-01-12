@@ -20,14 +20,10 @@ from starknet_devnet.blueprints.rpc.rpc_spec_write import RPC_SPECIFICATION_WRIT
 @lru_cache
 def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     specs_json = json.loads(RPC_SPECIFICATION)
-    schemas = specs_json["components"]["schemas"]
-    methods = {method["name"]: method for method in specs_json["methods"]}
-
     write_specs_json = json.loads(RPC_SPECIFICATION_WRITE)
-    methods = {
-        **methods,
-        **{method["name"]: method for method in write_specs_json["methods"]},
-    }
+    schemas = specs_json["components"]["schemas"]
+
+    methods = {**_extract_methods(specs_json), **_extract_methods(write_specs_json)}
 
     for schema in schemas.values():
         # Newer version of the RPC (above 0.45.0) has properly defined `required` fields.
@@ -43,6 +39,10 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
             schema["unevaluatedProperties"] = False
 
     return methods, schemas
+
+
+def _extract_methods(specs_json: Dict[str, Any]) -> Dict[str, Any]:
+    return {method["name"]: method for method in specs_json["methods"]}
 
 
 def _response_schema_for_method(name: str) -> Dict[str, Any]:
