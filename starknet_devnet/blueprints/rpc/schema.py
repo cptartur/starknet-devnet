@@ -4,8 +4,10 @@ Utilities for validating RPC responses against RPC specification
 import json
 from collections import OrderedDict
 from functools import lru_cache, wraps
-from typing import Any, Dict, List, Tuple
+from itertools import zip_longest
+from typing import Any, Dict, List
 from typing import OrderedDict as OrderedDictType
+from typing import Tuple
 
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
@@ -135,11 +137,31 @@ def assert_valid_rpc_request(*args, method_name: str, **kwargs):
     if args and kwargs:
         raise ValueError("Cannot validate schemas with both args and kwargs provided.")
 
-    for arg, name in zip(args, schemas.keys()):
-        validate(arg, schemas[name])
+    if args:
+        if len(args) > len(schemas):
+            raise ValidationError("Too many arguments provided.")
 
-    for name, value in kwargs.items():
-        validate(value, schemas[name])
+        for name, arg in zip_longest(schemas.keys(), args, fillvalue="missing"):
+            if arg == "missing":
+                raise ValidationError(f"Missing arg for {name}.")
+
+            validate(arg, schemas[name])
+        return
+
+    if kwargs:
+        if len(kwargs) > len(schemas):
+            raise ValidationError("Too many arguments provided.")
+
+        for name in schemas.keys():
+            if name not in kwargs:
+                raise ValidationError(f"Missing kwarg for {name}.")
+
+            value = kwargs[name]
+            validate(value, schemas[name])
+        return
+
+    if length := len(schemas) != 0:
+        raise ValidationError(f"0 arguments provided to function expecting {length} arguments.")
 
 
 class ParamsValidationErrorWrapper(Exception):
