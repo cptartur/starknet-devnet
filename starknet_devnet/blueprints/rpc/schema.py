@@ -69,17 +69,7 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
     return {**base_schema, "components": {"schemas": schemas}}
 
 
-@dataclass
-class RequestSchema:
-    """
-    Return type of _request_schemas_for_method function
-    """
-
-    params: List[str]
-    schemas: Dict[str, Any]
-
-
-def _request_schemas_for_method(name: str) -> RequestSchema:
+def _request_schemas_for_method(name: str) -> Dict[str, Any]:
     methods, schemas = _load_schemas()
     params_json: List[Dict[str, Any]] = methods[name]["params"]
 
@@ -91,7 +81,7 @@ def _request_schemas_for_method(name: str) -> RequestSchema:
         schema = {**param["schema"], "components": {"schemas": schemas}}
         request_schemas[name] = schema
 
-    return RequestSchema(params, request_schemas)
+    return request_schemas
 
 
 def _construct_method_name(method_name: str) -> str:
@@ -120,7 +110,7 @@ def assert_valid_rpc_request(*args, method_name: str, **kwargs):
         validate(arg, schemas.schemas[name])
 
     for name, value in kwargs.items():
-        validate(value, schemas.schemas[name])
+        validate(value, schemas[name])
 
 
 class ParamsValidationErrorWrapper(Exception):
