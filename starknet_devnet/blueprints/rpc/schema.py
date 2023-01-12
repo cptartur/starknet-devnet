@@ -129,7 +129,7 @@ class ParamsValidationErrorWrapper(Exception):
     """
 
     def __init__(self, err: ValidationError):
-        super().__init__()
+        super().__init__("Failed to validate schema for params.")
         self.validation_error = err
 
 
@@ -139,7 +139,7 @@ class ResponseValidationErrorWrapper(Exception):
     """
 
     def __init__(self, err: ValidationError):
-        super().__init__()
+        super().__init__("Failed to validate schema for response.")
         self.validation_error = err
 
 
