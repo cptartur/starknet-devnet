@@ -44,7 +44,8 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
 def _response_schema_for_method(name: str) -> Dict[str, Any]:
     """
-    Return a dict structured like
+    Return a dict with correct structure for jsonschema validation.
+
     {
         // base schema
         // ...
@@ -55,7 +56,14 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
             }
         }
     }
-    for the use in json schema validation.
+
+    Main "base schema" has to be placed in the "top-level" of the dictionary, so jsonschema
+    knows against what of the multiple schemas present in the RPC spec to verify.
+
+    RPC spec is currently formatted in the way, that every `$ref` is made with respect to
+    #/components/schemas/SCHEMA_NAME
+    The dict with schemas has to follow the same structure using
+    nested dictionaries.
     """
 
     methods, schemas = _load_schemas()
@@ -70,6 +78,23 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
 
 
 def _request_schemas_for_method(name: str) -> Dict[str, Any]:
+    """
+    Return a dict with correct structure for jsonschema validation.
+
+    {
+        "schema1": { // schema 1 },
+        "schema2: { // schema 2 },
+        // ...
+        "components": {
+            "schemas": {
+                // rest of the schemas
+                // ...
+            }
+        }
+    }
+
+    See _response_schema_for_method docstring for more detailed explanation.
+    """
     methods, schemas = _load_schemas()
     params_json: List[Dict[str, Any]] = methods[name]["params"]
 
