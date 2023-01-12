@@ -106,8 +106,11 @@ def assert_valid_rpc_request(*args, method_name: str, **kwargs):
     """
     schemas = _request_schemas_for_method(_construct_method_name(method_name))
 
-    for arg, name in zip(args, schemas.params):
-        validate(arg, schemas.schemas[name])
+    if args and kwargs:
+        raise ValueError("Cannot validate schemas with both args and kwargs provided.")
+
+    for arg, name in zip(args, schemas.keys()):
+        validate(arg, schemas[name])
 
     for name, value in kwargs.items():
         validate(value, schemas[name])
