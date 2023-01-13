@@ -34,9 +34,6 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
         if "required" not in schema and "properties" in schema:
             schema["required"] = list(schema["properties"].keys())
 
-        # Ensures validation fails in case of extra fields not matched by any of `allOf` / `anyOf` branches.
-        if any(i for i in ("allOf", "anyOf", "oneOf")):
-            schema["unevaluatedProperties"] = False
 
     return methods, schemas
 
@@ -71,11 +68,7 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
 
     methods, schemas = _load_schemas()
     base_schema = methods[name]["result"]["schema"]
-
-    if not any(i in base_schema for i in ("allOf", "anyOf", "oneOf")):
-        # This has to be done here, because setting additionalProperties = False in
-        # load_schemas doesn't work with `allOf` etc. properly.
-        base_schema["additionalProperties"] = False
+    base_schema["unevaluatedProperties"] = False
 
     return {**base_schema, "components": {"schemas": schemas}}
 
