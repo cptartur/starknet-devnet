@@ -1021,9 +1021,15 @@ RPC_SPECIFICATION = r"""
                 "title": "The block object",
                 "allOf": [
                     {
-                        "status": {
-                            "$ref": "#/components/schemas/BLOCK_STATUS"
-                        }
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "$ref": "#/components/schemas/BLOCK_STATUS"
+                            }
+                        },
+                        "required": [
+                            "status"
+                        ]
                     },
                     {
                         "$ref": "#/components/schemas/BLOCK_HEADER"
