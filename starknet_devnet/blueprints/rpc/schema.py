@@ -34,7 +34,6 @@ def _load_schemas() -> Tuple[Dict[str, Any], Dict[str, Any]]:
         if "required" not in schema and "properties" in schema:
             schema["required"] = list(schema["properties"].keys())
 
-
     return methods, schemas
 
 
