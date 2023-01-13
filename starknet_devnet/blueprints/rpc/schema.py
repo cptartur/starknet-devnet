@@ -168,6 +168,9 @@ class ParamsValidationErrorWrapper(Exception):
         super().__init__("Failed to validate schema for params.")
         self.validation_error = err
 
+    def __str__(self):
+        return f"Invalid value for {self.validation_error.validator}: {self.validation_error.message}"
+
 
 class ResponseValidationErrorWrapper(Exception):
     """
@@ -177,6 +180,9 @@ class ResponseValidationErrorWrapper(Exception):
     def __init__(self, err: ValidationError):
         super().__init__("Failed to validate schema for response.")
         self.validation_error = err
+
+    def __str__(self):
+        return f"Invalid value for {self.validation_error.validator}: {self.validation_error.message}"
 
 
 def validate_schema(method_name: str):
