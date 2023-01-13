@@ -168,7 +168,7 @@ class ParamsValidationErrorWrapper(Exception):
         self.validation_error = err
 
     def __str__(self):
-        return f"Invalid value for {self.validation_error.validator}: {self.validation_error.message}"
+        return f'Got invalid value for parameter: "{self.validation_error.message}"'
 
 
 class ResponseValidationErrorWrapper(Exception):
@@ -181,7 +181,9 @@ class ResponseValidationErrorWrapper(Exception):
         self.validation_error = err
 
     def __str__(self):
-        return f"Invalid value for {self.validation_error.validator}: {self.validation_error.message}"
+        return (
+            f'Devnet tried to return invalid value: "{self.validation_error.message}"'
+        )
 
 
 def validate_schema(method_name: str):
