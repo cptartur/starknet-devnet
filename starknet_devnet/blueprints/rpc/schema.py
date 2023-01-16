@@ -14,6 +14,7 @@ from jsonschema.exceptions import ValidationError
 
 from starknet_devnet.blueprints.rpc.rpc_spec import RPC_SPECIFICATION
 from starknet_devnet.blueprints.rpc.rpc_spec_write import RPC_SPECIFICATION_WRITE
+from starknet_devnet.state import state
 
 
 # Cache the function result so schemas are not reloaded from disk on every call
@@ -195,17 +196,21 @@ def validate_schema(method_name: str):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            try:
-                assert_valid_rpc_request(*args, **kwargs, method_name=method_name)
-            except ValidationError as err:
-                raise ParamsValidationErrorWrapper(err) from err
+            config = state.starknet_wrapper.config
+
+            if config.validate_rpc_requests:
+                try:
+                    assert_valid_rpc_request(*args, **kwargs, method_name=method_name)
+                except ValidationError as err:
+                    raise ParamsValidationErrorWrapper(err) from err
 
             result = await func(*args, **kwargs)
 
-            try:
-                assert_valid_rpc_schema(result, method_name)
-            except ValidationError as err:
-                raise ResponseValidationErrorWrapper(err) from err
+            if config.validate_rpc_responses:
+                try:
+                    assert_valid_rpc_schema(result, method_name)
+                except ValidationError as err:
+                    raise ResponseValidationErrorWrapper(err) from err
 
             return result
 
