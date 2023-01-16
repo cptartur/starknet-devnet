@@ -3,6 +3,7 @@ Test RPC schema validation
 """
 
 from test.rpc.rpc_utils import rpc_call
+from test.shared import PREDEPLOY_ACCOUNT_CLI_ARGS
 
 import pytest
 from starkware.starknet.public.abi import get_selector_from_name
@@ -138,6 +139,30 @@ def test_schema_raises_on_invalid_args(params):
     error = resp["error"]
 
     assert error["code"] == RpcErrorCode.INVALID_PARAMS.value
+
+
+@pytest.mark.usefixtures("run_devnet_in_background")
+@pytest.mark.parametrize(
+    "run_devnet_in_background",
+    [["--disable-rpc-request-validation"]],
+    indirect=True,
+)
+def test_schema_does_not_raise_on_disabled_request_validation():
+    resp = rpc_call(
+        "starknet_call",
+        params={
+            "block_id": "latest",
+            "request": {
+                "contract_address": 1234,
+                "entry_point_selector": -1,
+                "calldata": ["a", "b", "c"],
+            },
+        },
+    )
+
+    # Error will be raised when trying to execute function, but it shouldn't be the INVALID_PARAMS error
+    error = resp["error"]
+    assert error["code"] != RpcErrorCode.INVALID_PARAMS.value
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")
