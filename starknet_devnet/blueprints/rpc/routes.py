@@ -128,6 +128,11 @@ def parse_body(body: dict) -> Tuple[Callable, Union[List, dict], int]:
         )
 
     if not isinstance(params, (List, Dict)):
-        raise RpcError(code=RpcErrorCode.INVALID_PARAMS.value, message="Invalid params")
+        raise RpcError(
+            code=RpcErrorCode.INVALID_PARAMS.value,
+            # fmt: off
+            message="Invalid \"params\" type. Value of \"params\" must be a dict or list",
+            # fmt: on
+        )
 
     return methods[method_name], params, message_id
