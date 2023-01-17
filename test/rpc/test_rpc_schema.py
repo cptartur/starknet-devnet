@@ -1,12 +1,13 @@
 """
 Test RPC schema validation
 """
-
 from test.rpc.rpc_utils import rpc_call
+from unittest.mock import MagicMock, patch
 
 import pytest
 from starkware.starknet.public.abi import get_selector_from_name
 
+from starknet_devnet.blueprints.rpc.schema import _assert_valid_rpc_request
 from starknet_devnet.blueprints.rpc.structures.types import RpcErrorCode
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
 
@@ -247,22 +248,20 @@ def test_schema_does_not_raise_on_correct_kwargs(params):
 
     # Error will be raised because address is correctly formatted but incorrect
     error = resp["error"]
-    print(error)
     assert all(error["code"] != code.value for code in RpcErrorCode)
 
 
 @pytest.mark.usefixtures("run_devnet_in_background")
-def test_schema_does_not_raise_on_correct_args(deploy_info):
+def test_schema_does_not_raise_on_correct_args():
     """
     Test args validation allows valid requests
     """
-    contract_address: str = deploy_info["address"]
 
     resp = rpc_call(
         "starknet_call",
         params=[
             {
-                "contract_address": rpc_felt(contract_address),
+                "contract_address": "0x01",
                 "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
                 "calldata": [],
             },
@@ -270,3 +269,49 @@ def test_schema_does_not_raise_on_correct_args(deploy_info):
         ],
     )
     assert "error" not in resp
+
+
+def test_schema_with_optional_values():
+    """
+    Test schema validation allowing omitting non-required values
+    """
+    with patch(
+        "starknet_devnet.blueprints.rpc.schema._request_schemas_for_method", MagicMock()
+    ) as mocked:
+        mocked.return_value = {
+            "key": {
+                "is_required": True,
+                "$ref": "#/components/schemas/STORAGE_KEY",
+                "components": {
+                    "schemas": {
+                        "STORAGE_KEY": {
+                            "type": "string",
+                            "title": "A storage key",
+                            "$comment": "A storage key, represented as a string of hex digits",
+                            "description": "A storage key. Represented as up to 62 hex digits, 3 bits, and 5 leading zeroes.",
+                            "pattern": "^0x0[0-7]{1}[a-fA-F0-9]{0,62}$",
+                        }
+                    }
+                },
+            },
+            "value": {
+                "is_required": False,
+                "$ref": "#/components/schemas/STORAGE_KEY",
+                "components": {
+                    "schemas": {
+                        "STORAGE_KEY": {
+                            "type": "string",
+                            "title": "A storage key",
+                            "$comment": "A storage key, represented as a string of hex digits",
+                            "description": "A storage key. Represented as up to 62 hex digits, 3 bits, and 5 leading zeroes.",
+                            "pattern": "^0x0[0-7]{1}[a-fA-F0-9]{0,62}$",
+                        }
+                    }
+                },
+            },
+        }
+
+        # Testing private methods is not ideal, but I have no other idea of testing this logic
+        # because mocking doesn't work with devnet running in background subprocess
+        params = {"key": "0x01"}
+        _assert_valid_rpc_request(**params, method_name="starknet_method")
