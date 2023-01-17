@@ -149,7 +149,9 @@ def _assert_valid_rpc_request(*args, method_name: str, **kwargs):
 
         for name, arg in zip_longest(schemas.keys(), args, fillvalue="missing"):
             if arg == "missing":
-                raise ValidationError(f"Missing arg for {name}.")
+                # fmt: off
+                raise ValidationError(f"Missing positional argument \"{name}\".")
+                # fmt: on
 
             validate(arg, schemas[name])
         return
@@ -161,7 +163,9 @@ def _assert_valid_rpc_request(*args, method_name: str, **kwargs):
         for name, schema in schemas.items():
             if name not in kwargs:
                 if schema["is_required"]:
-                    raise ValidationError(f"Missing kwarg for {name}.")
+                    # fmt: off
+                    raise ValidationError(f"Missing keyword argument \"{name}\".")
+                    # fmt: on
                 continue
 
             value = kwargs[name]
