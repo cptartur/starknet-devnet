@@ -70,7 +70,9 @@ async def assert_block_id_is_latest_or_pending(block_id: BlockId) -> None:
         if block_id in ("latest", "pending"):
             return
 
-    raise RpcError(code=RpcErrorCode.INVALID_PARAMS.value, message="Invalid params")
+    raise RpcError(
+        code=RpcErrorCode.INVALID_PARAMS.value, message="Invalid value for block id."
+    )
 
 
 def rpc_felt(value: Union[int, str]) -> Felt:
