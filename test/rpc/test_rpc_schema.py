@@ -68,7 +68,6 @@ def test_schema_raises_on_invalid_kwargs(params):
     assert "error" in resp
     error = resp["error"]
 
-    print(error)
     assert error["code"] == RpcErrorCode.INVALID_PARAMS.value
 
 
@@ -198,7 +197,6 @@ def test_schema_does_not_raise_on_correct_kwargs(params):
 
     # Error will be raised because address is correctly formatted but incorrect
     error = resp["error"]
-    print(error)
     assert all(error["code"] != code.value for code in RpcErrorCode)
 
 
