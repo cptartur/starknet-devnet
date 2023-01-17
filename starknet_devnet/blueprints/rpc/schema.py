@@ -78,15 +78,25 @@ def _request_schemas_for_method(name: str) -> OrderedDictType[str, Any]:
     Return a dict with correct structure for jsonschema validation.
 
     {
-        "param1": { // schema 1 },
-        "param2: { // schema 2 },
-        // ...
-        "components": {
-            "schemas": {
-                // rest of the schemas
-                // ...
+        "param1": {
+            // schema 1
+            "components": {
+                "schemas": {
+                    // rest of the schemas
+                    // ...
+                }
             }
-        }
+        },
+        "param2: {
+            // schema 2
+            "components": {
+                "schemas": {
+                    // rest of the schemas
+                    // ...
+                }
+            }
+        },
+        // ...
     }
 
     See _response_schema_for_method docstring for more detailed explanation.
