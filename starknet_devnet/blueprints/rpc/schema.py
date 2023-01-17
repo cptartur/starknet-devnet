@@ -147,7 +147,9 @@ def _assert_valid_rpc_request(*args, method_name: str, **kwargs):
 
         for name, schema in schemas.items():
             if name not in kwargs:
-                raise ValidationError(f"Missing kwarg for {name}.")
+                if schema["is_required"]:
+                    raise ValidationError(f"Missing kwarg for {name}.")
+                continue
 
             value = kwargs[name]
             validate(value, schema)
@@ -169,7 +171,9 @@ class ParamsValidationErrorWrapper(Exception):
         self.validation_error = err
 
     def __str__(self):
-        return f'Got invalid value for parameter: "{self.validation_error.message}"'
+        # fmt: off
+        return f"Got invalid value for parameter: \"{self.validation_error.message}\""
+        # fmt: on
 
 
 class ResponseValidationErrorWrapper(Exception):
@@ -182,9 +186,11 @@ class ResponseValidationErrorWrapper(Exception):
         self.validation_error = err
 
     def __str__(self):
+        # fmt: off
         return (
-            f'Devnet tried to return invalid value: "{self.validation_error.message}"'
+            f"Devnet tried to return invalid value: \"{self.validation_error.message}\""
         )
+        # fmt: on
 
 
 def validate_schema(method_name: str):
