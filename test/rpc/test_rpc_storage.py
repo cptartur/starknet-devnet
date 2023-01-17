@@ -6,7 +6,6 @@ from test.rpc.rpc_utils import rpc_call
 import pytest
 from starkware.starknet.public.abi import get_storage_var_address
 
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.structures.types import RpcErrorCode
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
 
@@ -30,7 +29,6 @@ def test_get_storage_at(deploy_info):
     )
     storage = resp["result"]
 
-    assert_valid_rpc_schema(storage, "starknet_getStorageAt")
     assert storage == "0x045"
 
 

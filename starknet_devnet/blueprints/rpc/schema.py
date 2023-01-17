@@ -111,7 +111,7 @@ def _construct_method_name(method_name: str) -> str:
     return method_name
 
 
-def assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
+def _assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
     """
     Check if rpc response is valid against the schema for given method name
     """
@@ -119,7 +119,7 @@ def assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
     validate(data, schema=schema)
 
 
-def assert_valid_rpc_request(*args, method_name: str, **kwargs):
+def _assert_valid_rpc_request(*args, method_name: str, **kwargs):
     """
     Validate if RPC request (parameters) is correct.
 
@@ -200,7 +200,7 @@ def validate_schema(method_name: str):
 
             if config.validate_rpc_requests:
                 try:
-                    assert_valid_rpc_request(*args, **kwargs, method_name=method_name)
+                    _assert_valid_rpc_request(*args, **kwargs, method_name=method_name)
                 except ValidationError as err:
                     raise ParamsValidationErrorWrapper(err) from err
 
@@ -208,7 +208,7 @@ def validate_schema(method_name: str):
 
             if config.validate_rpc_responses:
                 try:
-                    assert_valid_rpc_schema(result, method_name)
+                    _assert_valid_rpc_schema(result, method_name)
                 except ValidationError as err:
                     raise ResponseValidationErrorWrapper(err) from err
 

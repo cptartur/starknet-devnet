@@ -21,7 +21,6 @@ from test.util import assert_hex_equal, assert_transaction, deploy
 import pytest
 from starkware.starknet.public.abi import get_storage_var_address
 
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
 from starknet_devnet.general_config import DEFAULT_GENERAL_CONFIG
 
@@ -55,7 +54,6 @@ def test_get_state_update():
     assert_hex_equal(contract_class_hash, EXPECTED_CLASS_HASH)
 
     resp = rpc_call("starknet_getStateUpdate", params={"block_id": "latest"})
-    assert_valid_rpc_schema(resp["result"], "starknet_getStateUpdate")
     diff_after_declare = resp["result"]["state_diff"]
     assert diff_after_declare["declared_contract_hashes"] == [
         rpc_felt(contract_class_hash)
@@ -71,7 +69,6 @@ def test_get_state_update():
     deployer_address = deployer_deploy_info["address"]
 
     resp = rpc_call("starknet_getStateUpdate", params={"block_id": "latest"})
-    assert_valid_rpc_schema(resp["result"], "starknet_getStateUpdate")
     diff_after_deploy = resp["result"]["state_diff"]
 
     deployer_diff = diff_after_deploy["deployed_contracts"][0]
@@ -96,7 +93,6 @@ def test_storage_diff():
     contract_address, _ = deploy_and_invoke_storage_contract(value)
 
     resp = rpc_call("starknet_getStateUpdate", params={"block_id": "latest"})
-    assert_valid_rpc_schema(resp["result"], "starknet_getStateUpdate")
     storage_diffs = resp["result"]["state_diff"]["storage_diffs"]
 
     # list can be in different order per test run
@@ -125,7 +121,6 @@ def test_chain_id(params):
 
     resp = rpc_call("starknet_chainId", params=params)
     rpc_chain_id = resp["result"]
-    assert_valid_rpc_schema(rpc_chain_id, "starknet_chainId")
 
     assert rpc_chain_id == hex(chain_id)
 
@@ -140,7 +135,6 @@ def test_syncing(params):
     assert "result" in resp, f"Unexpected response: {resp}"
 
     result = resp["result"]
-    assert_valid_rpc_schema(result, "starknet_syncing")
     assert result is False
 
 
@@ -197,7 +191,6 @@ def test_get_nonce():
         method="starknet_getNonce",
         params={"block_id": "latest", "contract_address": rpc_felt(account_address)},
     )
-    assert_valid_rpc_schema(initial_resp["result"], "starknet_getNonce")
     assert initial_resp["result"] == "0x00"
 
     deployment_info = deploy_empty_contract()
@@ -213,7 +206,6 @@ def test_get_nonce():
         method="starknet_getNonce",
         params={"block_id": "latest", "contract_address": rpc_felt(account_address)},
     )
-    assert_valid_rpc_schema(final_resp["result"], "starknet_getNonce")
     assert final_resp["result"] == "0x01"
 
 

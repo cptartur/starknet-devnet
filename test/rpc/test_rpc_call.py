@@ -6,7 +6,6 @@ from test.rpc.rpc_utils import rpc_call
 import pytest
 from starkware.starknet.public.abi import get_selector_from_name
 
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.structures.types import RpcErrorCode
 from starknet_devnet.blueprints.rpc.utils import rpc_felt
 
@@ -31,7 +30,6 @@ def test_call(deploy_info, latest_block_id):
     )
     assert "error" not in resp
     result = resp["result"]
-    assert_valid_rpc_schema(result, "starknet_call")
 
     assert result == ["0x045"]
 

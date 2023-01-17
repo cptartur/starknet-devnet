@@ -6,7 +6,6 @@ from test.rpc.rpc_utils import rpc_call
 import pytest
 from starkware.starknet.services.api.gateway.transaction_utils import decompress_program
 
-from starknet_devnet.blueprints.rpc.schema import assert_valid_rpc_schema
 from starknet_devnet.blueprints.rpc.utils import BlockId, rpc_felt
 
 EXPECTED_ENTRY_POINTS = {
@@ -86,7 +85,6 @@ def test_get_class(class_hash):
         "starknet_getClass", params={"block_id": "latest", "class_hash": class_hash}
     )
     contract_class = resp["result"]
-    assert_valid_rpc_schema(contract_class, "starknet_getClass")
 
     assert contract_class["entry_points_by_type"] == EXPECTED_ENTRY_POINTS
     assert isinstance(contract_class["program"], str)
@@ -124,7 +122,6 @@ def test_get_class_at(deploy_info):
         params={"contract_address": rpc_felt(contract_address), "block_id": block_id},
     )
     contract_class = resp["result"]
-    assert_valid_rpc_schema(contract_class, "starknet_getClass")
 
     assert contract_class["entry_points_by_type"] == EXPECTED_ENTRY_POINTS
     assert isinstance(contract_class["program"], str)
