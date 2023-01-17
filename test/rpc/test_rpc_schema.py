@@ -3,7 +3,6 @@ Test RPC schema validation
 """
 
 from test.rpc.rpc_utils import rpc_call
-from test.shared import PREDEPLOY_ACCOUNT_CLI_ARGS
 
 import pytest
 from starkware.starknet.public.abi import get_selector_from_name
@@ -148,6 +147,9 @@ def test_schema_raises_on_invalid_args(params):
     indirect=True,
 )
 def test_schema_does_not_raise_on_disabled_request_validation():
+    """
+    Test schema validation is disabled by CLI argument
+    """
     resp = rpc_call(
         "starknet_call",
         params={
