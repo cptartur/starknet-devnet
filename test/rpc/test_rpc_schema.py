@@ -77,7 +77,7 @@ from starknet_devnet.blueprints.rpc.utils import rpc_felt
 )
 def test_schema_raises_on_invalid_kwargs(params):
     """
-    Call contract
+    Call params validation with kwargs
     """
     resp = rpc_call("starknet_call", params=params)
 
@@ -161,7 +161,7 @@ def test_schema_raises_on_invalid_kwargs(params):
 )
 def test_schema_raises_on_invalid_args(params):
     """
-    Call contract
+    Test params validation with args
     """
     resp = rpc_call("starknet_call", params=params)
 
@@ -240,7 +240,7 @@ def test_schema_does_not_raise_on_disabled_request_validation():
 )
 def test_schema_does_not_raise_on_correct_kwargs(params):
     """
-    Call contract
+    Test kwargs validation allows valid requests
     """
 
     resp = rpc_call("starknet_call", params=params)
@@ -254,7 +254,7 @@ def test_schema_does_not_raise_on_correct_kwargs(params):
 @pytest.mark.usefixtures("run_devnet_in_background")
 def test_schema_does_not_raise_on_correct_args(deploy_info):
     """
-    Call contract
+    Test args validation allows valid requests
     """
     contract_address: str = deploy_info["address"]
 
