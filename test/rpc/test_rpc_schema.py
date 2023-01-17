@@ -23,6 +23,22 @@ from starknet_devnet.blueprints.rpc.utils import rpc_felt
             },
         },
         {
+            "request": {
+                "contract_address": "0x01",
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
+                "calldata": [],
+            },
+            "block_id": 12345,
+        },
+        {
+            "request": {
+                "contract_address": "0x01",
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
+                "calldata": [],
+            },
+            "block_id": "aaaeee",
+        },
+        {
             "block_id": "latest",
         },
         {},
@@ -84,6 +100,22 @@ def test_schema_raises_on_invalid_kwargs(params):
         ],
         [
             "latest",
+        ],
+        [
+            {
+                "contract_address": "0x01",
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
+                "calldata": [],
+            },
+            12345,
+        ],
+        [
+            {
+                "contract_address": "0x01",
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
+                "calldata": [],
+            },
+            "aaaeee",
         ],
         [],
         [
@@ -186,6 +218,24 @@ def test_schema_does_not_raise_on_disabled_request_validation():
                 "calldata": [],
             },
         },
+        {
+            "request": {
+                "contract_address": "0x01",
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
+                "calldata": [],
+            },
+            "block_id": {"block_hash": "0x00"},
+        },
+        {
+            "request": {
+                "contract_address": "0x01",
+                "entry_point_selector": rpc_felt(get_selector_from_name("get_balance")),
+                "calldata": [],
+            },
+            "block_id": {
+                "block_number": 0,
+            },
+        },
     ),
 )
 def test_schema_does_not_raise_on_correct_kwargs(params):
@@ -197,6 +247,7 @@ def test_schema_does_not_raise_on_correct_kwargs(params):
 
     # Error will be raised because address is correctly formatted but incorrect
     error = resp["error"]
+    print(error)
     assert all(error["code"] != code.value for code in RpcErrorCode)
 
 
