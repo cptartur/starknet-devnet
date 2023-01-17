@@ -94,5 +94,5 @@ def test_get_storage_at_raises_on_incorrect_block_id(deploy_info):
 
     assert ex["error"] == {
         "code": RpcErrorCode.INVALID_PARAMS.value,
-        "message": "Invalid params",
+        "message": "Invalid value for block id.",
     }
