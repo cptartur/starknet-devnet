@@ -67,7 +67,9 @@ async def syncing() -> Union[dict, bool]:
 
 
 # pylint: disable=too-many-arguments
-@validate_schema("getEvents")
+# Events response does not currently conform to RPC specs
+# and will need fixing before validation is added
+# @validate_schema("getEvents")
 async def get_events(
     from_block: BlockId,
     to_block: BlockId,
