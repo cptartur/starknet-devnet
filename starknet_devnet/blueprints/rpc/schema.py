@@ -94,12 +94,15 @@ def _request_schemas_for_method(name: str) -> OrderedDictType[str, Any]:
     methods, schemas = _load_schemas()
     params_json: List[Dict[str, Any]] = methods[name]["params"]
 
-    params = []
     request_schemas = OrderedDict()
     for param in params_json:
         name = param["name"]
-        params.append(name)
-        schema = {**param["schema"], "components": {"schemas": schemas}}
+        is_required = param.get("required", False)
+        schema = {
+            **param["schema"],
+            "is_required": is_required,
+            "components": {"schemas": schemas},
+        }
         request_schemas[name] = schema
 
     return request_schemas
