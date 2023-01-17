@@ -118,17 +118,11 @@ def _request_schemas_for_method(name: str) -> OrderedDictType[str, Any]:
     return request_schemas
 
 
-def _construct_method_name(method_name: str) -> str:
-    if "starknet_" not in method_name:
-        method_name = "starknet_" + method_name
-    return method_name
-
-
 def _assert_valid_rpc_schema(data: Dict[str, Any], method_name: str):
     """
     Check if rpc response is valid against the schema for given method name
     """
-    schema = _response_schema_for_method(_construct_method_name(method_name))
+    schema = _response_schema_for_method("starknet_" + method_name)
     validate(data, schema=schema)
 
 
@@ -138,7 +132,7 @@ def _assert_valid_rpc_request(*args, method_name: str, **kwargs):
 
     Raise ValidationError if not.
     """
-    schemas = _request_schemas_for_method(_construct_method_name(method_name))
+    schemas = _request_schemas_for_method("starknet_" + method_name)
 
     if args and kwargs:
         raise ValueError("Cannot validate schemas with both args and kwargs provided.")
