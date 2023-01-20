@@ -68,6 +68,7 @@ def _response_schema_for_method(name: str) -> Dict[str, Any]:
 
     methods, schemas = _load_schemas()
     base_schema = methods[name]["result"]["schema"]
+    base_schema["required"] = methods[name]["result"].get("required", [])
     base_schema["unevaluatedProperties"] = False
 
     return {**base_schema, "components": {"schemas": schemas}}
