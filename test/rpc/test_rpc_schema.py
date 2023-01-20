@@ -268,7 +268,10 @@ def test_schema_does_not_raise_on_correct_args():
             "latest",
         ],
     )
-    assert "error" not in resp
+
+    # Error will be raised because address is correctly formatted but incorrect
+    error = resp["error"]
+    assert all(error["code"] != code.value for code in RpcErrorCode)
 
 
 def test_schema_with_optional_values():
