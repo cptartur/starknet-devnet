@@ -33,7 +33,8 @@ RPC_SPECIFICATION_WRITE = r"""
                             "$ref": "#/components/schemas/TXN_HASH"
                         }
                     }
-                }
+                },
+                "required": ["transaction_hash"]
             },
             "errors": []
         },
@@ -63,7 +64,8 @@ RPC_SPECIFICATION_WRITE = r"""
                             "$ref": "#/components/schemas/FELT"
                         }
                     }
-                }
+                },
+                "required": ["transaction_hash", "class_hash"]
             },
             "errors": [
                 {
@@ -97,7 +99,8 @@ RPC_SPECIFICATION_WRITE = r"""
                             "title": "The address of the new contract",
                             "$ref": "#/components/schemas/FELT"
                         }
-                    }
+                    },
+                    "required": ["transaction_hash", "contract_address"]
                 }
             },
             "errors": [
@@ -132,7 +135,8 @@ RPC_SPECIFICATION_WRITE = r"""
                             "title": "The address of the new contract",
                             "$ref": "#/components/schemas/FELT"
                         }
-                    }
+                    },
+                    "required": ["transaction_hash", "contract_address"]
                 }
             },
             "errors": [
